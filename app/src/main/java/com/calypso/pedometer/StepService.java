@@ -223,8 +223,7 @@ public class StepService extends Service implements SensorEventListener {
             @Override
             public void onChange() {
                 StepDetector.CURRENT_STEP++;
-                updateNotification("今日步数：" + previousStep + " 步");
-                Toast.makeText(StepService.this, "使用计步传感器" + stepSensor + "今天走了" + StepDetector.CURRENT_STEP + "步", Toast.LENGTH_LONG).show();
+                updateNotification("今日步数：" + StepDetector.CURRENT_STEP + " 步");
             }
         });
     }
