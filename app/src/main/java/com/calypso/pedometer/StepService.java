@@ -27,9 +27,7 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 
 /**
  * 计步服务
@@ -37,22 +35,20 @@ import java.util.Date;
  */
 @TargetApi(Build.VERSION_CODES.CUPCAKE)
 public class StepService extends Service implements SensorEventListener {
-    private final String TAG = "TAG_StepService";   //"StepService";
-    //默认为30秒进行一次存储
+    private final String TAG = "StepService";
     private static int duration = 30000;
-    private static String CURRENTDATE = "";   //当前的日期
-    private SensorManager sensorManager;    //传感器管理者
+    private SensorManager sensorManager;
     private StepDetector stepDetector;
     private NotificationManager nm;
     private NotificationCompat.Builder builder;
     private Messenger messenger = new Messenger(new MessengerHandler());
+    private StepValuePassListener stepValuePassListener;
     private BroadcastReceiver mBatInfoReceiver;
     private PowerManager.WakeLock mWakeLock;
-    private TimeCount time;
     //计步传感器类型 0-counter 1-detector 2-加速度传感器
     private static int stepSensor = -1;
-    //用于计步传感器
-    private int previousStep;    //用于记录之前的步数
+    private int previousStep;
+    private TimeCount time;
 
     private static class MessengerHandler extends Handler {
         @Override
@@ -80,15 +76,8 @@ public class StepService extends Service implements SensorEventListener {
     @Override
     public void onCreate() {
         super.onCreate();
-        //初始化广播
         initBroadcastReceiver();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                //启动步数监测器
-                startStepDetector();
-            }
-        }).start();
+        startStepDetector();
         startTimeCount();
     }
 
@@ -97,13 +86,19 @@ public class StepService extends Service implements SensorEventListener {
         return START_STICKY;
     }
 
-    /**
-     * 获得今天的日期
-     */
-    private String getTodayDate() {
-        Date date = new Date(System.currentTimeMillis());
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        return sdf.format(date);
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return messenger.getBinder();
+    }
+
+    @Override
+    public void onDestroy() {
+        stopForeground(true);
+        unregisterReceiver(mBatInfoReceiver);
+        Intent intent = new Intent(this, StepService.class);
+        startService(intent);
+        super.onDestroy();
     }
 
     /**
@@ -160,12 +155,6 @@ public class StepService extends Service implements SensorEventListener {
         time.start();
     }
 
-
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return messenger.getBinder();
-    }
 
     private void startStepDetector() {
         if (sensorManager != null && stepDetector != null) {
@@ -227,17 +216,14 @@ public class StepService extends Service implements SensorEventListener {
      * 使用加速度传感器
      */
     private void addBasePedoListener() {
-        //只有在使用加速传感器的时候才会调用StepDetector这个类
         stepDetector = new StepDetector(this);
-        //获得传感器类型，这里获得的类型是加速度传感器
-        //此方法用来注册，只有注册过才会生效，参数：SensorEventListener的实例，Sensor的实例，更新速率
         Sensor sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         sensorManager.registerListener(stepDetector, sensor, SensorManager.SENSOR_DELAY_UI);
         stepDetector.setOnSensorChangeListener(new StepDetector.OnSensorChangeListener() {
             @Override
             public void onChange() {
                 StepDetector.CURRENT_STEP++;
-                updateNotification("今日步数：" + previousStep+ " 步");
+                updateNotification("今日步数：" + previousStep + " 步");
                 Toast.makeText(StepService.this, "使用计步传感器" + stepSensor + "今天走了" + StepDetector.CURRENT_STEP + "步", Toast.LENGTH_LONG).show();
             }
         });
@@ -247,14 +233,18 @@ public class StepService extends Service implements SensorEventListener {
     public void onSensorChanged(SensorEvent event) {
         if (stepSensor == 0) {   //使用计步传感器
             previousStep = (int) event.values[0];    //得到传感器统计的步数
-            StepDetector.CURRENT_STEP = (int) event.values[0] - previousStep;
-            Toast.makeText(StepService.this, "使用计步传感器" + stepSensor + "今天走了" + StepDetector.CURRENT_STEP + "步"+previousStep, Toast.LENGTH_LONG).show();
+            StepDetector.CURRENT_STEP = previousStep;
+            Toast.makeText(StepService.this, "使用计步传感器" + stepSensor + "今天走了" + previousStep + "步", Toast.LENGTH_LONG).show();
         } else if (stepSensor == 1) {
             StepDetector.CURRENT_STEP++;
-            Toast.makeText(StepService.this, "使用计步传感器" + stepSensor + "今天走了" + StepDetector.CURRENT_STEP + "步"+previousStep, Toast.LENGTH_LONG).show();
+            Toast.makeText(StepService.this, "使用计步传感器" + stepSensor + "今天走了" + previousStep + "步", Toast.LENGTH_LONG).show();
+        }
+        if (stepValuePassListener != null) {
+            stepValuePassListener.stepsChanged(previousStep);
         }
         //更新状态栏信息
-        updateNotification("今日步数：" + previousStep+ " 步");
+        updateNotification("今日步数：" + previousStep + " 步");
+
     }
 
     @Override
@@ -262,15 +252,6 @@ public class StepService extends Service implements SensorEventListener {
 
     }
 
-    @Override
-    public void onDestroy() {
-        //取消前台进程
-        stopForeground(true);
-        unregisterReceiver(mBatInfoReceiver);
-        Intent intent = new Intent(this, StepService.class);
-        startService(intent);
-        super.onDestroy();
-    }
 
     //  同步方法   得到休眠锁
     synchronized private PowerManager.WakeLock getLock(Context context) {
@@ -319,13 +300,14 @@ public class StepService extends Service implements SensorEventListener {
 
     /**
      * 更新通知(显示通知栏信息)
+     *
      * @param content
      */
-    private void updateNotification(String content){
-        builder=new android.support.v7.app.NotificationCompat.Builder(this);
+    private void updateNotification(String content) {
+        builder = new android.support.v7.app.NotificationCompat.Builder(this);
         builder.setPriority(Notification.PRIORITY_MIN);
-        PendingIntent contentIntent=PendingIntent.getActivity(this,0,
-                new Intent(this, MainActivity.class),0);
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+                new Intent(this, MainActivity.class), 0);
         builder.setContentIntent(contentIntent);
         builder.setSmallIcon(R.mipmap.ic_launcher_round);
         builder.setTicker("BasePedo");
@@ -333,10 +315,14 @@ public class StepService extends Service implements SensorEventListener {
         //设置不可清除
         builder.setOngoing(true);
         builder.setContentText(content);
-        Notification notification=builder.build(); //上面均为构造Notification的构造器中设置的属性
+        Notification notification = builder.build(); //上面均为构造Notification的构造器中设置的属性
 
-        startForeground(0,notification);
-        nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-        nm.notify(R.string.app_name,notification);
+        startForeground(0, notification);
+        nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.notify(R.string.app_name, notification);
+    }
+
+    public void setStepValuePassListener(StepValuePassListener stepValuePassListener) {
+        this.stepValuePassListener = stepValuePassListener;
     }
 }
