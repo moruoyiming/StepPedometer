@@ -20,13 +20,12 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity implements StepValuePassListener, Handler.Callback {
+public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
     private TextView textView;
-    //循环取当前时刻的步数中间的时间间隔
-    private long TIME_INTERVAL = 500;
-    /*Messenger 服务端*/
-    private Messenger mServerMessenger;
+    private Messenger messenger;
+    private Messenger mGetReplyMessenger = new Messenger(new Handler(this));
+    private Handler delayHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,20 +47,6 @@ public class MainActivity extends AppCompatActivity implements StepValuePassList
         });
     }
 
-    private Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case Constant.MSG_FROM_SERVER:
-                    Log.i("mHandler", "handleMessage: from server: " + msg.getData().getString("msg"));
-                    break;
-            }
-        }
-    };
-
-    private Messenger messenger;
-    private Messenger mGetReplyMessenger = new Messenger(new Handler(this));
-    private Handler delayHandler;
 
     //以bind形式开启service，故有ServiceConnection接收回调
     ServiceConnection conn = new ServiceConnection() {
@@ -82,14 +67,12 @@ public class MainActivity extends AppCompatActivity implements StepValuePassList
         }
     };
 
-    //接收从服务端回调的步数
     @Override
     public boolean handleMessage(Message msg) {
         switch (msg.what) {
             case Constant.MSG_FROM_SERVER:
-                //更新步数
                 textView.setText(msg.getData().getInt("step") + "");
-                delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, TIME_INTERVAL);
+                delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
                 break;
             case Constant.REQUEST_SERVER:
                 try {
@@ -124,10 +107,5 @@ public class MainActivity extends AppCompatActivity implements StepValuePassList
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void stepsChanged(int paramInt) {
-        textView.setText("今日步数: " + paramInt + " 步");
     }
 }

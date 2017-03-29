@@ -42,7 +42,6 @@ public class StepService extends Service implements SensorEventListener {
     private NotificationManager nm;
     private NotificationCompat.Builder builder;
     private Messenger messenger = new Messenger(new MessengerHandler());
-    private StepValuePassListener stepValuePassListener;
     private BroadcastReceiver mBatInfoReceiver;
     private PowerManager.WakeLock mWakeLock;
     //计步传感器类型 0-counter 1-detector 2-加速度传感器
@@ -59,10 +58,9 @@ public class StepService extends Service implements SensorEventListener {
                         Messenger messenger = msg.replyTo;
                         Message replyMsg = Message.obtain(null, Constant.MSG_FROM_SERVER);
                         Bundle bundle = new Bundle();
-                        //将现在的步数以消息的形式进行发送
                         bundle.putInt("step", StepDetector.CURRENT_STEP);
                         replyMsg.setData(bundle);
-                        messenger.send(replyMsg);  //发送要返回的消息
+                        messenger.send(replyMsg);
                     } catch (RemoteException e) {
                         e.printStackTrace();
                     }
@@ -234,16 +232,11 @@ public class StepService extends Service implements SensorEventListener {
         if (stepSensor == 0) {   //使用计步传感器
             previousStep = (int) event.values[0];    //得到传感器统计的步数
             StepDetector.CURRENT_STEP = previousStep;
-            Toast.makeText(StepService.this, "使用计步传感器" + stepSensor + "今天走了" + previousStep + "步", Toast.LENGTH_LONG).show();
         } else if (stepSensor == 1) {
             StepDetector.CURRENT_STEP++;
-            Toast.makeText(StepService.this, "使用计步传感器" + stepSensor + "今天走了" + previousStep + "步", Toast.LENGTH_LONG).show();
-        }
-        if (stepValuePassListener != null) {
-            stepValuePassListener.stepsChanged(previousStep);
         }
         //更新状态栏信息
-        updateNotification("今日步数：" + previousStep + " 步");
+        updateNotification("今日步数：" + StepDetector.CURRENT_STEP + " 步");
 
     }
 
@@ -258,7 +251,6 @@ public class StepService extends Service implements SensorEventListener {
         if (mWakeLock != null) {
             if (mWakeLock.isHeld()) {
                 mWakeLock.release();
-                Log.v(TAG, "释放锁");
             }
             mWakeLock = null;
         }
@@ -276,7 +268,6 @@ public class StepService extends Service implements SensorEventListener {
                 mWakeLock.acquire(300000);
             }
         }
-        Log.v(TAG, "得到了锁");
         return (mWakeLock);
     }
 
@@ -312,17 +303,12 @@ public class StepService extends Service implements SensorEventListener {
         builder.setSmallIcon(R.mipmap.ic_launcher_round);
         builder.setTicker("BasePedo");
         builder.setContentTitle("BasePedo");
-        //设置不可清除
         builder.setOngoing(true);
         builder.setContentText(content);
-        Notification notification = builder.build(); //上面均为构造Notification的构造器中设置的属性
-
+        Notification notification = builder.build();
         startForeground(0, notification);
         nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         nm.notify(R.string.app_name, notification);
     }
 
-    public void setStepValuePassListener(StepValuePassListener stepValuePassListener) {
-        this.stepValuePassListener = stepValuePassListener;
-    }
 }
