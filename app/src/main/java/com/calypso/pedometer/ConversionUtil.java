@@ -1,5 +1,7 @@
 package com.calypso.pedometer;
 
+import java.text.DecimalFormat;
+
 /**
  * Project：Pedometer
  * Created：jianz

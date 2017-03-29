@@ -20,12 +20,15 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
+import java.text.DecimalFormat;
+
 public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
     private TextView textView;
     private Messenger messenger;
     private Messenger mGetReplyMessenger = new Messenger(new Handler(this));
     private Handler delayHandler;
+    private DecimalFormat df1 = new DecimalFormat("0.00");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,7 +74,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public boolean handleMessage(Message msg) {
         switch (msg.what) {
             case Constant.MSG_FROM_SERVER:
-                textView.setText(msg.getData().getInt("step") + "");
+                int step = msg.getData().getInt("step");
+                String mileages = String.valueOf(ConversionUtil.step2Mileage(step));
+                String calorie = df1.format(ConversionUtil.step2Calories(step));
+                textView.setText("今日步数：" + step + " 步" + "\n" + "消耗卡路里：" + calorie + " 卡" + "\n" + "大约行走: " + mileages + " 米");
                 delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
                 break;
             case Constant.REQUEST_SERVER:

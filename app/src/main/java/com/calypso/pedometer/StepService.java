@@ -229,8 +229,8 @@ public class StepService extends Service implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (stepSensor == 0) {   //使用计步传感器
-            previousStep = (int) event.values[0];    //得到传感器统计的步数
+        if (stepSensor == 0) {
+            previousStep = (int) event.values[0];
             StepDetector.CURRENT_STEP = previousStep;
         } else if (stepSensor == 1) {
             StepDetector.CURRENT_STEP++;
@@ -254,7 +254,6 @@ public class StepService extends Service implements SensorEventListener {
             }
             mWakeLock = null;
         }
-
         if (mWakeLock == null) {
             PowerManager mgr = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
             mWakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, StepService.class.getName());
@@ -283,7 +282,6 @@ public class StepService extends Service implements SensorEventListener {
 
         @Override
         public void onFinish() {
-            //如果计时器正常结束，则开始计步
             time.cancel();
             startTimeCount();
         }
@@ -300,9 +298,9 @@ public class StepService extends Service implements SensorEventListener {
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, MainActivity.class), 0);
         builder.setContentIntent(contentIntent);
-        builder.setSmallIcon(R.mipmap.ic_launcher_round);
-        builder.setTicker("BasePedo");
-        builder.setContentTitle("BasePedo");
+        builder.setSmallIcon(R.mipmap.ic_launcher);
+        builder.setTicker("StepPedometer");
+        builder.setContentTitle("StepPedometer");
         builder.setOngoing(true);
         builder.setContentText(content);
         Notification notification = builder.build();
