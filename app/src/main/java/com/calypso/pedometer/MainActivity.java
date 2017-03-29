@@ -21,7 +21,12 @@ import android.view.MenuItem;
 import android.widget.TextView;
 
 import java.text.DecimalFormat;
-
+/**
+ * Project：Pedometer
+ * Created：jianz
+ * Date：2017/3/27 14:47
+ * Summry：
+ */
 public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
     private TextView textView;

@@ -30,8 +30,10 @@ import android.widget.Toast;
 import java.util.Calendar;
 
 /**
- * 计步服务
- * Created by lenovo on 2017/1/17.
+ * Project：Pedometer
+ * Created：jianz
+ * Date：2017/3/27 14:47
+ * Summry：
  */
 @TargetApi(Build.VERSION_CODES.CUPCAKE)
 public class StepService extends Service implements SensorEventListener {

@@ -1,9 +1,11 @@
 package com.calypso.pedometer;
 
 /**
- * Created by lenovo on 2017/1/17.
+ * Project：Pedometer
+ * Created：jianz
+ * Date：2017/3/27 14:47
+ * Summry：
  */
-
 public class Constant {
     //用于发送消息
     public static final int MSG_FROM_CLIENT=0;

@@ -24,7 +24,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Date;
 
-
+/**
+ * Project：Pedometer
+ * Created：jianz
+ * Date：2017/3/27 14:47
+ * Summry：
+ */
 public abstract class Logger {
 
     private static FileWriter fw;
