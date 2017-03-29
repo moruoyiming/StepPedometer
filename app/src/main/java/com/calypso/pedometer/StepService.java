@@ -81,6 +81,7 @@ public class StepService extends Service implements SensorEventListener {
         startTimeCount();
     }
 
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         return START_STICKY;
@@ -99,6 +100,9 @@ public class StepService extends Service implements SensorEventListener {
         Intent intent = new Intent(this, StepService.class);
         startService(intent);
         super.onDestroy();
+        if (time != null) {
+            time.cancel();
+        }
     }
 
     /**
