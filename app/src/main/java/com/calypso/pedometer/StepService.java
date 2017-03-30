@@ -28,6 +28,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import java.util.Calendar;
+import java.util.List;
 
 /**
  * Project：Pedometer
@@ -48,6 +49,8 @@ public class StepService extends Service implements SensorEventListener {
     private PowerManager.WakeLock mWakeLock;
     //计步传感器类型 0-counter 1-detector 2-加速度传感器
     private static int stepSensor = -1;
+    private static String CURRENTDATE = "";
+    private boolean isNewDay = false;
     private int previousStep;
     private TimeCount time;
 
@@ -77,7 +80,13 @@ public class StepService extends Service implements SensorEventListener {
     public void onCreate() {
         super.onCreate();
         initBroadcastReceiver();
-        startStepDetector();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                initTodayData();
+                startStepDetector();
+            }
+        }).start();
         startTimeCount();
     }
 
@@ -97,8 +106,6 @@ public class StepService extends Service implements SensorEventListener {
     public void onDestroy() {
         stopForeground(true);
         unregisterReceiver(mBatInfoReceiver);
-        Intent intent = new Intent(this, StepService.class);
-        startService(intent);
         super.onDestroy();
         if (time != null) {
             time.cancel();
@@ -154,6 +161,24 @@ public class StepService extends Service implements SensorEventListener {
         registerReceiver(mBatInfoReceiver, filter);
     }
 
+    /**
+     * 初始化当天的日期
+     */
+    private void initTodayData() {
+        CURRENTDATE = DateUtil.getTodayDate();
+        DbUtils.createDb(this, Constant.DB_NAME);
+        List<StepData> list = DbUtils.getQueryByWhere(StepData.class, "today", new String[]{CURRENTDATE});
+        if (list.size() == 0 || list.isEmpty()) {
+            StepDetector.CURRENT_STEP = 0;
+            isNewDay = true;
+        } else if (list.size() == 1) {
+            isNewDay = false;
+            StepDetector.CURRENT_STEP = Integer.parseInt(list.get(0).getStep());
+        } else {
+            Log.e(TAG, "出错了！");
+        }
+    }
+
     private void startTimeCount() {
         time = new TimeCount(duration, 1000);
         time.start();
@@ -203,7 +228,7 @@ public class StepService extends Service implements SensorEventListener {
         if (countSensor != null) {
             stepSensor = 0;
             Log.v(TAG, "countSensor 计步传感器");
-            sensorManager.registerListener(StepService.this, countSensor, SensorManager.SENSOR_DELAY_UI);
+            sensorManager.registerListener(this, countSensor, SensorManager.SENSOR_DELAY_UI);
         } else if (detectorSensor != null) {
             stepSensor = 1;
             Log.v(TAG, "detector 步行检测传感器");
@@ -235,8 +260,25 @@ public class StepService extends Service implements SensorEventListener {
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (stepSensor == 0) {
-            previousStep = (int) event.values[0];
-            StepDetector.CURRENT_STEP = previousStep;
+            if (isNewDay) {
+                //用于判断是否为新的一天，如果是那么记录下计步传感器统计步数中的数据
+                // 今天走的步数=传感器当前统计的步数-之前统计的步数
+                previousStep = (int) event.values[0];    //得到传感器统计的步数
+                isNewDay = false;
+                save();
+                //为防止在previousStep赋值之前数据库就进行了保存，我们将数据库中的信息更新一下
+                List<StepData> list = DbUtils.getQueryByWhere(StepData.class, "today", new String[]{CURRENTDATE});
+                //修改数据
+                StepData data = list.get(0);
+                data.setPreviousStep(previousStep + "");
+                DbUtils.update(data);
+            } else {
+                //取出之前的数据
+                List<StepData> list = DbUtils.getQueryByWhere(StepData.class, "today", new String[]{CURRENTDATE});
+                StepData data = list.get(0);
+                this.previousStep = Integer.valueOf(data.getPreviousStep());
+            }
+            StepDetector.CURRENT_STEP = (int) event.values[0] - previousStep;
         } else if (stepSensor == 1) {
             StepDetector.CURRENT_STEP++;
         }
@@ -244,6 +286,25 @@ public class StepService extends Service implements SensorEventListener {
         updateNotification("今日步数：" + StepDetector.CURRENT_STEP + " 步");
 
     }
+
+    private void save() {
+        int tempStep = StepDetector.CURRENT_STEP;
+
+        List<StepData> list = DbUtils.getQueryByWhere(StepData.class, "today", new String[]{CURRENTDATE});
+        if (list.size() == 0 || list.isEmpty()) {
+            StepData data = new StepData();
+            data.setToday(CURRENTDATE);
+            data.setStep(tempStep + "");
+            data.setPreviousStep(previousStep + "");
+            DbUtils.insert(data);
+        } else if (list.size() == 1) {
+            //修改数据
+            StepData data = list.get(0);
+            data.setStep(tempStep + "");
+            DbUtils.update(data);
+        }
+    }
+
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {

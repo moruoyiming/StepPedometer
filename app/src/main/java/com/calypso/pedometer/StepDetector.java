@@ -26,7 +26,7 @@ import java.util.TimerTask;
  * 果相同则说明步数不在增长，计步结束
  */
 public class StepDetector implements SensorEventListener {
-    private final String TAG = "TAG_StepDetector";     //"StepDetector";
+    private final String TAG = "StepDetector";
     //存放三轴数据(x,y,z)的个数
     private final int valueNum = 5;
     //用于存放计算阈值的波峰波谷差值
