@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package com.calypso.pedometer;
+package com.calypso.pedometer.utils;
 
 import android.database.Cursor;
 import android.os.Environment;
+
+import com.calypso.pedometer.BuildConfig;
 
 import java.io.File;
 import java.io.FileWriter;

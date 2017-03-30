@@ -1,7 +1,6 @@
-package com.calypso.pedometer;
+package com.calypso.pedometer.activity;
 
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
@@ -14,11 +13,15 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+
+import com.calypso.pedometer.R;
+import com.calypso.pedometer.constant.Constant;
+import com.calypso.pedometer.stepdetector.StepService;
+import com.calypso.pedometer.utils.ConversionUtil;
 
 import java.text.DecimalFormat;
 /**
@@ -79,7 +82,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     public boolean handleMessage(Message msg) {
         switch (msg.what) {
             case Constant.MSG_FROM_SERVER:
-                int step = msg.getData().getInt("step");
+                long step = msg.getData().getLong("step");
                 String mileages = String.valueOf(ConversionUtil.step2Mileage(step));
                 String calorie = df1.format(ConversionUtil.step2Calories(step));
                 textView.setText("今日步数：" + step + " 步" + "\n" + "消耗卡路里：" + calorie + " 卡" + "\n" + "大约行走: " + mileages + " 米");

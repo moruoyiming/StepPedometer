@@ -1,4 +1,4 @@
-package com.calypso.pedometer;
+package com.calypso.pedometer.stepdetector;
 
 import android.content.Context;
 import android.hardware.Sensor;
@@ -66,11 +66,11 @@ public class StepDetector implements SensorEventListener {
      */
     private int CountTimeState = 0;
     //记录当前的步数
-    public static int CURRENT_STEP = 0;
+    public static long CURRENT_STEP = 0;
     //记录临时的步数
-    public static int TEMP_STEP = 0;
+    public static long TEMP_STEP = 0;
     //记录上一次临时的步数
-    private int lastStep = -1;
+    private long lastStep = -1;
     //用x,y,z轴三个维度算出平均值
     public static float average = 0;
     private Timer timer;

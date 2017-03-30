@@ -1,4 +1,4 @@
-package com.calypso.pedometer;
+package com.calypso.pedometer.utils;
 
 import android.content.Context;
 
@@ -53,6 +53,11 @@ public class DateUtil {
      */
     public static String getTodayDate() {
         SimpleDateFormat df = new SimpleDateFormat(DATE_SMALL_STR);
+        return df.format(new Date(System.currentTimeMillis()));
+    }
+
+    public static String getTodayTime(String dateformat) {
+        SimpleDateFormat df = new SimpleDateFormat(dateformat);
         return df.format(new Date(System.currentTimeMillis()));
     }
 
