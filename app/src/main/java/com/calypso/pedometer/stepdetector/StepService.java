@@ -274,7 +274,7 @@ public class StepService extends Service implements SensorEventListener {
                 StepInfo stepInfo = DBHelper.getStepInfo(CURRENTDATE);
                 this.previousStep = stepInfo.getPreviousStepCount();
             }
-            StepDetector.CURRENT_STEP = (int) event.values[0] - previousStep;
+            StepDetector.CURRENT_STEP = (long) event.values[0] - previousStep;
         } else if (stepSensor == 1) {
             StepDetector.CURRENT_STEP++;
         }
