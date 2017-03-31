@@ -148,19 +148,24 @@ public class StepService extends Service implements SensorEventListener {
                     Log.v(TAG, "screen on");
                 } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                     Log.v(TAG, "screen off");
+                    save();
                     //改为60秒一存储
                     duration = 60000;
                 } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
                     Log.v(TAG, "screen unlock");
+                    save();
                     //改为30秒一存储
                     duration = 30000;
                 } else if (Intent.ACTION_CLOSE_SYSTEM_DIALOGS.equals(intent.getAction())) {
                     Log.v(TAG, "receive Intent.ACTION_CLOSE_SYSTEM_DIALOGS  出现系统对话框");
                     //保存一次
+                    save();
                 } else if (Intent.ACTION_SHUTDOWN.equals(intent.getAction())) {
                     Log.v(TAG, "receive ACTION_SHUTDOWN");
+                    save();
                 } else if (Intent.ACTION_TIME_CHANGED.equals(intent.getAction())) {
                     Log.v(TAG, "receive ACTION_TIME_CHANGED");
+                    initTodayData();
                 }
             }
         };
@@ -258,7 +263,6 @@ public class StepService extends Service implements SensorEventListener {
         stepDetector.setOnSensorChangeListener(new StepDetector.OnSensorChangeListener() {
             @Override
             public void onChange() {
-                StepDetector.CURRENT_STEP++;
                 updateNotification("今日步数：" + StepDetector.CURRENT_STEP + " 步");
             }
         });
@@ -295,6 +299,7 @@ public class StepService extends Service implements SensorEventListener {
             stepInfo.setPreviousStepCount(previousStep);
             DBHelper.insertStepInfo(stepInfo);
         } else {
+            stepInfo.setStepCount(tempStep);
             stepInfo.setPreviousStepCount(previousStep);
             DBHelper.updateStepInfo(stepInfo);
         }
@@ -343,6 +348,7 @@ public class StepService extends Service implements SensorEventListener {
         @Override
         public void onFinish() {
             time.cancel();
+            save();
             startTimeCount();
         }
     }

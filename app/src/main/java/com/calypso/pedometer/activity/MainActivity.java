@@ -21,8 +21,11 @@ import android.widget.TextView;
 import com.calypso.pedometer.constant.Preferences;
 import com.calypso.pedometer.R;
 import com.calypso.pedometer.constant.Constant;
+import com.calypso.pedometer.greendao.DBHelper;
+import com.calypso.pedometer.greendao.entry.StepInfo;
 import com.calypso.pedometer.stepdetector.StepService;
 import com.calypso.pedometer.utils.ConversionUtil;
+import com.calypso.pedometer.utils.DateUtil;
 
 import java.text.DecimalFormat;
 
@@ -60,6 +63,14 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                         .setAction("Action", null).show();
             }
         });
+        StepInfo stepInfo = DBHelper.getStepInfo(DateUtil.getTodayDate());
+        if (stepInfo != null) {
+            long step = stepInfo.getStepCount();
+            String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
+            String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
+            textView.setText("今日步数：" + step + " 步" + "\n" + "消耗卡路里：" + calorie + " 卡" + "\n" + "大约行走: " + mileages + " 米");
+        }
+
     }
 
 
