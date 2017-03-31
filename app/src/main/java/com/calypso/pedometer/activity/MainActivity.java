@@ -3,6 +3,8 @@ package com.calypso.pedometer.activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -26,8 +28,18 @@ import com.calypso.pedometer.greendao.entry.StepInfo;
 import com.calypso.pedometer.stepdetector.StepService;
 import com.calypso.pedometer.utils.ConversionUtil;
 import com.calypso.pedometer.utils.DateUtil;
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.components.YAxis;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.utils.FileUtils;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Project：Pedometer
@@ -43,7 +55,9 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     private Handler delayHandler;
     private DecimalFormat df1 = new DecimalFormat("0.00");
     private int stepBenchmark = 0;
-
+    private BarChart mChart;
+    protected Typeface mTfLight;
+    private List<BarEntry> mSinusData;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,6 +65,49 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         stepBenchmark = Preferences.getStepBenchmark(MainActivity.this);
         delayHandler = new Handler(this);
         textView = (TextView) findViewById(R.id.step);
+        mChart = (BarChart) findViewById(R.id.chart1);
+
+        mSinusData = FileUtils.loadBarEntriesFromAssets(getAssets(), "othersine.txt");
+        mChart.setDrawBarShadow(false);
+        mChart.setDrawValueAboveBar(true);
+        mChart.getDescription().setEnabled(false);
+        mTfLight = Typeface.createFromAsset(getAssets(), "OpenSans-Light.ttf");
+        mChart.setMaxVisibleValueCount(60);
+        mChart.setPinchZoom(false);
+        mChart.setDrawGridBackground(false);
+        mChart.getDescription().setEnabled(false);
+        mChart.setDrawBarShadow(false);
+
+        XAxis xAxis =mChart.getXAxis();
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setTypeface(mTfLight);
+        xAxis.setDrawGridLines(false);
+        xAxis.setDrawAxisLine(true);
+
+        YAxis leftAxis = mChart.getAxisLeft();
+        leftAxis.setLabelCount(6, false);
+        leftAxis.setAxisMaximum(20000);
+        leftAxis.setGranularityEnabled(true);
+        leftAxis.setGranularity(0.1f);
+
+        YAxis rightAxis = mChart.getAxisRight();
+        rightAxis.setDrawGridLines(false);
+        rightAxis.setTypeface(mTfLight);
+        rightAxis.setLabelCount(6, false);
+        rightAxis.setAxisMaximum(20000);
+        rightAxis.setGranularity(0.1f);
+
+        Legend l = mChart.getLegend();
+        l.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
+        l.setHorizontalAlignment(Legend.LegendHorizontalAlignment.LEFT);
+        l.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        l.setDrawInside(false);
+        l.setForm(Legend.LegendForm.SQUARE);
+        l.setFormSize(7f);
+        l.setTextSize(11f);
+        l.setXEntrySpace(4f);
+
+        mChart.animateXY(2000, 2000);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         Intent intent = new Intent(this, StepService.class);
@@ -63,6 +120,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                         .setAction("Action", null).show();
             }
         });
+        setData(6);
+        mChart.invalidate();
         StepInfo stepInfo = DBHelper.getStepInfo(DateUtil.getTodayDate());
         if (stepInfo != null) {
             long step = stepInfo.getStepCount();
@@ -72,7 +131,35 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         }
 
     }
+    private void setData(int count) {
 
+        ArrayList<BarEntry> entries = new ArrayList<BarEntry>();
+
+        for (int i = 0; i < count; i++) {
+            entries.add(mSinusData.get(i));
+        }
+
+        BarDataSet set;
+
+        if (mChart.getData() != null &&
+                mChart.getData().getDataSetCount() > 0) {
+            set = (BarDataSet) mChart.getData().getDataSetByIndex(0);
+            set.setValues(entries);
+            mChart.getData().notifyDataChanged();
+            mChart.notifyDataSetChanged();
+        } else {
+            set = new BarDataSet(entries, "Sinus Function");
+            set.setColor(Color.rgb(240, 120, 124));
+        }
+
+        BarData data = new BarData(set);
+        data.setValueTextSize(10f);
+        data.setValueTypeface(mTfLight);
+        data.setDrawValues(false);
+        data.setBarWidth(0.8f);
+
+        mChart.setData(data);
+    }
 
     //以bind形式开启service，故有ServiceConnection接收回调
     ServiceConnection conn = new ServiceConnection() {
