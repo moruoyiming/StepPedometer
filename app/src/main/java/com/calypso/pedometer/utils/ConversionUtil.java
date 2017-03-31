@@ -1,6 +1,5 @@
 package com.calypso.pedometer.utils;
 
-import java.text.DecimalFormat;
 
 /**
  * Project：Pedometer
@@ -11,11 +10,11 @@ import java.text.DecimalFormat;
 
 public class ConversionUtil {
 
-    public static float step2Calories(long paramInt) {
-        return (float) (paramInt * 65 * 0.6D * 65.0D / 100000.0D);
+    public static float step2Calories(long paramInt, int benchmark) {
+        return (float) (paramInt * benchmark * 0.6D * 65.0D / 100000.0D);
     }
 
-    public static float step2Mileage(long paramInt) {
-        return (paramInt * 65 / 100.0F);
+    public static float step2Mileage(long paramInt, int benchmark) {
+        return (paramInt * benchmark / 100.0F);
     }
 }

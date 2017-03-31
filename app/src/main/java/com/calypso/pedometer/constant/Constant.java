@@ -13,4 +13,7 @@ public class Constant {
     public static final int REQUEST_SERVER = 2;
     public static long TIME_INTERVAL = 500;
     public static final String DB_NAME = "pedometer_db";
+    public static final String WHETHER_NOTIFICATION = "whether_notification";
+    public static final String STEP_BENCHMARK = "step_benchmark";
+    public static final int BASE_STEP = 65;
 }

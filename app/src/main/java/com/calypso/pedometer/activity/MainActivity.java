@@ -18,12 +18,14 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
+import com.calypso.pedometer.constant.Preferences;
 import com.calypso.pedometer.R;
 import com.calypso.pedometer.constant.Constant;
 import com.calypso.pedometer.stepdetector.StepService;
 import com.calypso.pedometer.utils.ConversionUtil;
 
 import java.text.DecimalFormat;
+
 /**
  * Project：Pedometer
  * Created：jianz
@@ -37,11 +39,13 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     private Messenger mGetReplyMessenger = new Messenger(new Handler(this));
     private Handler delayHandler;
     private DecimalFormat df1 = new DecimalFormat("0.00");
+    private int stepBenchmark = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        stepBenchmark = Preferences.getStepBenchmark(MainActivity.this);
         delayHandler = new Handler(this);
         textView = (TextView) findViewById(R.id.step);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -83,8 +87,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         switch (msg.what) {
             case Constant.MSG_FROM_SERVER:
                 long step = msg.getData().getLong("step");
-                String mileages = String.valueOf(ConversionUtil.step2Mileage(step));
-                String calorie = df1.format(ConversionUtil.step2Calories(step));
+                String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
+                String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
                 textView.setText("今日步数：" + step + " 步" + "\n" + "消耗卡路里：" + calorie + " 卡" + "\n" + "大约行走: " + mileages + " 米");
                 delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
                 break;

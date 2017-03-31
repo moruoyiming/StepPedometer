@@ -26,6 +26,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
+import com.calypso.pedometer.constant.Preferences;
 import com.calypso.pedometer.constant.Constant;
 import com.calypso.pedometer.activity.MainActivity;
 import com.calypso.pedometer.R;
@@ -306,7 +307,6 @@ public class StepService extends Service implements SensorEventListener {
     }
 
 
-    //  同步方法   得到休眠锁
     synchronized private PowerManager.WakeLock getLock(Context context) {
         if (mWakeLock != null) {
             if (mWakeLock.isHeld()) {
@@ -347,26 +347,25 @@ public class StepService extends Service implements SensorEventListener {
         }
     }
 
-    /**
-     * 更新通知(显示通知栏信息)
-     *
-     * @param content
-     */
     private void updateNotification(String content) {
-        builder = new android.support.v7.app.NotificationCompat.Builder(this);
-        builder.setPriority(Notification.PRIORITY_MIN);
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-                new Intent(this, MainActivity.class), 0);
-        builder.setContentIntent(contentIntent);
-        builder.setSmallIcon(R.mipmap.ic_launcher);
-        builder.setTicker("StepPedometer");
-        builder.setContentTitle("StepPedometer");
-        builder.setOngoing(true);
-        builder.setContentText(content);
-        Notification notification = builder.build();
-        startForeground(0, notification);
-        nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        nm.notify(R.string.app_name, notification);
+        boolean isShowNotification = Preferences.getIsShowNotification(StepService.this);
+        if (isShowNotification) {
+            builder = new android.support.v7.app.NotificationCompat.Builder(this);
+            builder.setPriority(Notification.PRIORITY_MIN);
+            PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+                    new Intent(this, MainActivity.class), 0);
+            builder.setContentIntent(contentIntent);
+            builder.setSmallIcon(R.mipmap.ic_launcher);
+            builder.setTicker("StepPedometer");
+            builder.setContentTitle("StepPedometer");
+            builder.setOngoing(true);
+            builder.setContentText(content);
+            Notification notification = builder.build();
+            startForeground(0, notification);
+            nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            nm.notify(R.string.app_name, notification);
+        } else {
+            Log.i(TAG, "Do you have setting preferences is show Notification !");
+        }
     }
-
 }
