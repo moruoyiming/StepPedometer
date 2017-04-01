@@ -110,8 +110,11 @@ public class StepService extends Service implements SensorEventListener {
 
     @Override
     public void onDestroy() {
+        save();
         stopForeground(true);
         unregisterReceiver(mBatInfoReceiver);
+        Intent intent=new Intent(this,StepService.class);
+        startService(intent);
         super.onDestroy();
         if (time != null) {
             time.cancel();

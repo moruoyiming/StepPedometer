@@ -3,7 +3,9 @@ package com.calypso.pedometer.greendao;
 import com.calypso.pedometer.greendao.entry.StepInfo;
 import com.calypso.pedometer.greendao.gen.StepInfoDao;
 
+import org.greenrobot.greendao.Property;
 import org.greenrobot.greendao.query.Query;
+import org.greenrobot.greendao.query.QueryBuilder;
 
 import java.util.List;
 
