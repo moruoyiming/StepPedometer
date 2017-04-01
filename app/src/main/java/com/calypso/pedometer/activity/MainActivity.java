@@ -4,6 +4,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -38,6 +39,7 @@ import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.AxisBase;
+import com.github.mikephil.charting.components.Description;
 import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
@@ -53,7 +55,6 @@ import com.github.mikephil.charting.formatter.PercentFormatter;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.github.mikephil.charting.utils.ColorTemplate;
-import com.github.mikephil.charting.utils.FileUtils;
 import com.github.mikephil.charting.utils.MPPointF;
 
 import java.text.DecimalFormat;
@@ -79,34 +80,120 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
     protected Typeface mTfLight;
     private List<StepModel> mSinusData;
     private int countsize = 0;
+    protected String[] mParties = new String[]{"步数", "热量", "米数"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         stepBenchmark = Preferences.getStepBenchmark(MainActivity.this);
         delayHandler = new Handler(this);
         textView = (TextView) findViewById(R.id.step);
         mChart = (BarChart) findViewById(R.id.chart1);
         mPieChart = (PieChart) findViewById(R.id.chart);
         mSinusData = new ArrayList<>();
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
         Intent intent = new Intent(this, StepService.class);
         bindService(intent, conn, BIND_AUTO_CREATE);
         initBarChart();
-        setData(countsize);
+        initPieChart();
+        setBarChartData(countsize);
         mChart.invalidate();
+    }
+
+    //以bind形式开启service，故有ServiceConnection接收回调
+    ServiceConnection conn = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            try {
+                messenger = new Messenger(service);
+                Message msg = Message.obtain(null, Constant.MSG_FROM_CLIENT);
+                msg.replyTo = mGetReplyMessenger;
+                messenger.send(msg);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+        }
+    };
+
+    @Override
+    public boolean handleMessage(Message msg) {
+        switch (msg.what) {
+            case Constant.MSG_FROM_SERVER:
+                long step = msg.getData().getLong("step");
+                String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
+                String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
+                textView.setText("今日步数：" + step + " 步" + "消耗卡路里：" + calorie + " 卡" + "大约行走: " + mileages + " 米");
+                mPieChart.setCenterText(generateCenterSpannableText(step));
+                mPieChart.notifyDataSetChanged();
+                mPieChart.invalidate();
+                delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
+                break;
+            case Constant.REQUEST_SERVER:
+                try {
+                    Message msgl = Message.obtain(null, Constant.MSG_FROM_CLIENT);
+                    msgl.replyTo = mGetReplyMessenger;
+                    messenger.send(msgl);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+                break;
+        }
+        return false;
+    }
 
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private SpannableString generateCenterSpannableText(long step) {
+
+        SpannableString s = new SpannableString("今日步数：\n"+step);
+        s.setSpan(new RelativeSizeSpan(1.4f), 0, 4, 0);
+//        s.setSpan(new StyleSpan(Typeface.NORMAL), 14, s.length() - 15, 0);
+//        s.setSpan(new ForegroundColorSpan(Color.GRAY), 14, s.length() - 15, 0);
+//        s.setSpan(new RelativeSizeSpan(.8f), 14, s.length() - 15, 0);
+//        s.setSpan(new StyleSpan(Typeface.ITALIC), s.length() - 14, s.length(), 0);
+//        s.setSpan(new ForegroundColorSpan(ColorTemplate.getHoloBlue()), s.length() - 14, s.length(), 0);
+        return s;
+    }
+
+    @Override
+    public void onValueSelected(Entry e, Highlight h) {
+        if (e == null)
+            return;
+        Log.i("VAL SELECTED",
+                "Value: " + e.getY() + ", index: " + h.getX()
+                        + ", DataSet index: " + h.getDataSetIndex());
+    }
+
+    @Override
+    public void onNothingSelected() {
+        Log.i("PieChart", "nothing selected");
     }
 
     public void initBarChart() {
@@ -173,15 +260,23 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
             String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
             textView.setText("今日步数：" + step + " 步" + "消耗卡路里：" + calorie + " 卡" + "大约行走: " + mileages + " 米");
         }
+    }
 
-        mPieChart.setUsePercentValues(true);
-        mPieChart.getDescription().setEnabled(false);
+    public void initPieChart() {
+        mPieChart.setUsePercentValues(false);
+        mPieChart.getDescription().setEnabled(true);
+        Description description=new Description();
+        description.setText("运动数据");
+        description.setTextColor(Color.RED);
+        description.setTextAlign(Paint.Align.RIGHT);
+        description.setTextSize(10);
+        mPieChart.setDescription(description);
         mPieChart.setExtraOffsets(5, 10, 5, 5);
 
         mPieChart.setDragDecelerationFrictionCoef(0.95f);
 
         mPieChart.setCenterTextTypeface(mTfLight);
-        mPieChart.setCenterText(generateCenterSpannableText());
+
 
         mPieChart.setDrawHoleEnabled(true);
         mPieChart.setHoleColor(Color.WHITE);
@@ -202,7 +297,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
 
         mPieChart.setOnChartValueSelectedListener(this);
 
-        setData(3, 100);
+        setPieChartData(3, 100);
 
         mPieChart.animateY(1400, Easing.EasingOption.EaseInOutQuad);
 
@@ -220,8 +315,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         mPieChart.setEntryLabelTextSize(12f);
     }
 
-    private void setData(int count) {
-
+    private void setBarChartData(int count) {
         ArrayList<BarEntry> entries = new ArrayList<BarEntry>();
         for (int i = 0; i < count; i++) {
             entries.add(mSinusData.get(i));
@@ -246,11 +340,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         mChart.setData(data);
     }
 
-    protected String[] mParties = new String[]{
-            "步数", "热量", "米数"
-    };
 
-    private void setData(int count, float range) {
+    private void setPieChartData(int count, float range) {
 
         float mult = range;
 
@@ -259,9 +350,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         // NOTE: The order of the entries when being added to the entries array determines their position around the center of
         // the chart.
         for (int i = 0; i < count; i++) {
-            entries.add(new PieEntry((float) ((Math.random() * mult) + mult / 5),
-                    mParties[i % mParties.length],
-                    getResources().getDrawable(R.mipmap.star)));
+            entries.add(new PieEntry((float) ((Math.random() * mult) + mult / 5),mParties[i % mParties.length],getResources().getDrawable(R.mipmap.star)));
         }
 
         PieDataSet dataSet = new PieDataSet(entries, " 数据");
@@ -308,99 +397,5 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         mPieChart.highlightValues(null);
 
         mPieChart.invalidate();
-    }
-
-    //以bind形式开启service，故有ServiceConnection接收回调
-    ServiceConnection conn = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            try {
-                messenger = new Messenger(service);
-                Message msg = Message.obtain(null, Constant.MSG_FROM_CLIENT);
-                msg.replyTo = mGetReplyMessenger;
-                messenger.send(msg);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-        }
-    };
-
-    @Override
-    public boolean handleMessage(Message msg) {
-        switch (msg.what) {
-            case Constant.MSG_FROM_SERVER:
-                long step = msg.getData().getLong("step");
-                String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
-                String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
-                textView.setText("今日步数：" + step + " 步" + "消耗卡路里：" + calorie + " 卡" + "大约行走: " + mileages + " 米");
-                mPieChart.setCenterText("步数:" + step + " 步");
-                mPieChart.notifyDataSetChanged();
-                mPieChart.invalidate();
-                delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
-                break;
-            case Constant.REQUEST_SERVER:
-                try {
-                    Message msgl = Message.obtain(null, Constant.MSG_FROM_CLIENT);
-                    msgl.replyTo = mGetReplyMessenger;
-                    messenger.send(msgl);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-                break;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    private SpannableString generateCenterSpannableText() {
-
-        SpannableString s = new SpannableString("MPAndroidChart\ndeveloped by Philipp Jahoda");
-        s.setSpan(new RelativeSizeSpan(1.7f), 0, 14, 0);
-        s.setSpan(new StyleSpan(Typeface.NORMAL), 14, s.length() - 15, 0);
-        s.setSpan(new ForegroundColorSpan(Color.GRAY), 14, s.length() - 15, 0);
-        s.setSpan(new RelativeSizeSpan(.8f), 14, s.length() - 15, 0);
-        s.setSpan(new StyleSpan(Typeface.ITALIC), s.length() - 14, s.length(), 0);
-        s.setSpan(new ForegroundColorSpan(ColorTemplate.getHoloBlue()), s.length() - 14, s.length(), 0);
-        return s;
-    }
-
-    @Override
-    public void onValueSelected(Entry e, Highlight h) {
-
-        if (e == null)
-            return;
-        Log.i("VAL SELECTED",
-                "Value: " + e.getY() + ", index: " + h.getX()
-                        + ", DataSet index: " + h.getDataSetIndex());
-    }
-
-    @Override
-    public void onNothingSelected() {
-        Log.i("PieChart", "nothing selected");
     }
 }
