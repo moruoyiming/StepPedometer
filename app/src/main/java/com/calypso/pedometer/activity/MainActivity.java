@@ -12,16 +12,11 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.SpannableString;
-import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
-import android.text.style.StyleSpan;
 import android.util.Log;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -35,6 +30,7 @@ import com.calypso.pedometer.greendao.entry.StepInfo;
 import com.calypso.pedometer.stepdetector.StepService;
 import com.calypso.pedometer.utils.ConversionUtil;
 import com.calypso.pedometer.utils.DateUtil;
+import com.calypso.pedometer.utils.Timber;
 import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.PieChart;
@@ -85,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Timber.tag("MainActivity");
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -93,13 +90,12 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         textView = (TextView) findViewById(R.id.step);
         mChart = (BarChart) findViewById(R.id.chart1);
         mPieChart = (PieChart) findViewById(R.id.chart);
-        mSinusData = new ArrayList<>();
         Intent intent = new Intent(this, StepService.class);
         bindService(intent, conn, BIND_AUTO_CREATE);
         initBarChart();
+        initBarChatData();
         initPieChart();
-        setBarChartData(countsize);
-        mChart.invalidate();
+        setBarChartData();
     }
 
     //以bind形式开启service，故有ServiceConnection接收回调
@@ -129,9 +125,18 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
                 String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
                 String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
                 textView.setText("今日步数：" + step + " 步" + "消耗卡路里：" + calorie + " 卡" + "大约行走: " + mileages + " 米");
-                mPieChart.setCenterText(generateCenterSpannableText(step));
-                mPieChart.notifyDataSetChanged();
-                mPieChart.invalidate();
+//                mPieChart.setCenterText(generateCenterSpannableText(step));
+//                mPieChart.notifyDataSetChanged();
+//                mPieChart.invalidate();
+//                ArrayList<BarEntry> entries = new ArrayList<BarEntry>();
+//                mSinusData.get(countsize - 1).setStepCount(step);
+//                entries.add(mSinusData.get(i));
+//                BarDataSet set = (BarDataSet) mChart.getData().getDataSetByIndex(0);
+//                set.setValues(entries);
+//                Timber.d("what " + (countsize - 1) + " " + mSinusData.get(countsize - 1).getStepCount());
+//                mChart.getData().notifyDataChanged();
+//                mChart.notifyDataSetChanged();
+//                mChart.invalidate();
                 delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
                 break;
             case Constant.REQUEST_SERVER:
@@ -172,7 +177,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
 
     private SpannableString generateCenterSpannableText(long step) {
 
-        SpannableString s = new SpannableString("今日步数：\n"+step);
+        SpannableString s = new SpannableString("今日步数\n" + step);
         s.setSpan(new RelativeSizeSpan(1.4f), 0, 4, 0);
 //        s.setSpan(new StyleSpan(Typeface.NORMAL), 14, s.length() - 15, 0);
 //        s.setSpan(new ForegroundColorSpan(Color.GRAY), 14, s.length() - 15, 0);
@@ -197,15 +202,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
     }
 
     public void initBarChart() {
-        List<StepInfo> steps = DBHelper.getAllStepInfo();
-        if (steps.size() > 7) {
-            steps = steps.subList(steps.size() - 7, steps.size());
-        }
-        countsize = steps.size() < 7 ? steps.size() : 7;
-        for (int i = 0; i < countsize; i++) {
-            StepModel barEntry = new StepModel(i, steps.get(i).getStepCount(), steps.get(i).getDate());
-            mSinusData.add(barEntry);
-        }
+        mSinusData = new ArrayList<>();
         mChart.setPinchZoom(false);
         mChart.setDragEnabled(false);// 是否可以拖拽
         mChart.setScaleEnabled(false);// 是否可以缩放
@@ -233,14 +230,14 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         });
         YAxis leftAxis = mChart.getAxisLeft();
         leftAxis.setLabelCount(7, false);
-        leftAxis.setAxisMaximum(15000);
+        leftAxis.setAxisMaximum(20000);
         leftAxis.setGranularityEnabled(true);
         leftAxis.setGranularity(0.1f);
 
         YAxis rightAxis = mChart.getAxisRight();
         rightAxis.setDrawGridLines(false);
         rightAxis.setLabelCount(7, false);
-        rightAxis.setAxisMaximum(15000);
+        rightAxis.setAxisMaximum(20000);
         rightAxis.setGranularity(0.1f);
 
         Legend l = mChart.getLegend();
@@ -253,6 +250,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         l.setTextSize(11f);
         l.setXEntrySpace(4f);
         mChart.animateXY(2000, 2000);
+
+    }
+
+    public void initBarChatData() {
         StepInfo stepInfo = DBHelper.getStepInfo(DateUtil.getTodayDate());
         if (stepInfo != null) {
             long step = stepInfo.getStepCount();
@@ -260,22 +261,31 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
             String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
             textView.setText("今日步数：" + step + " 步" + "消耗卡路里：" + calorie + " 卡" + "大约行走: " + mileages + " 米");
         }
+        List<StepInfo> steps = DBHelper.getAllStepInfo();
+        if (steps.size() > 7) {
+            steps = steps.subList(steps.size() - 7, steps.size());
+        }
+        countsize = steps.size() < 7 ? steps.size() : 7;
+        for (int i = 0; i < countsize; i++) {
+            StepModel barEntry = new StepModel(i, steps.get(i).getStepCount(), steps.get(i).getDate());
+            mSinusData.add(barEntry);
+        }
     }
 
     public void initPieChart() {
         mPieChart.setUsePercentValues(false);
         mPieChart.getDescription().setEnabled(true);
-        Description description=new Description();
+        Description description = new Description();
         description.setText("运动数据");
         description.setTextColor(Color.RED);
         description.setTextAlign(Paint.Align.RIGHT);
-        description.setTextSize(10);
+        description.setTextSize(16);
         mPieChart.setDescription(description);
         mPieChart.setExtraOffsets(5, 10, 5, 5);
 
         mPieChart.setDragDecelerationFrictionCoef(0.95f);
 
-        mPieChart.setCenterTextTypeface(mTfLight);
+//        mPieChart.setCenterTextTypeface(mTfLight);
 
 
         mPieChart.setDrawHoleEnabled(true);
@@ -292,9 +302,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         mPieChart.setCenterTextSize(20);
         mPieChart.setRotationAngle(0);
         // mPieChartble rotation of the chart by touch
-        mPieChart.setRotationEnabled(true);
+        mPieChart.setRotationEnabled(false);
         mPieChart.setHighlightPerTapEnabled(true);
-
         mPieChart.setOnChartValueSelectedListener(this);
 
         setPieChartData(3, 100);
@@ -315,9 +324,9 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         mPieChart.setEntryLabelTextSize(12f);
     }
 
-    private void setBarChartData(int count) {
+    private void setBarChartData() {
         ArrayList<BarEntry> entries = new ArrayList<BarEntry>();
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < countsize; i++) {
             entries.add(mSinusData.get(i));
         }
         BarDataSet set;
@@ -341,19 +350,18 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
     }
 
 
-    private void setPieChartData(int count, float range) {
+    private void setPieChartData(int count, long step) {
 
-        float mult = range;
-
+        String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
+        String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
         ArrayList<PieEntry> entries = new ArrayList<PieEntry>();
 
         // NOTE: The order of the entries when being added to the entries array determines their position around the center of
         // the chart.
-        for (int i = 0; i < count; i++) {
-            entries.add(new PieEntry((float) ((Math.random() * mult) + mult / 5),mParties[i % mParties.length],getResources().getDrawable(R.mipmap.star)));
-        }
-
-        PieDataSet dataSet = new PieDataSet(entries, " 数据");
+        entries.add(new PieEntry(100 / 3, mParties[0] + "\n" + step + "步", getResources().getDrawable(R.mipmap.star)));
+        entries.add(new PieEntry(100 / 3, mParties[1] + "\n" + calorie + "卡", getResources().getDrawable(R.mipmap.star)));
+        entries.add(new PieEntry(100 / 3, mParties[2] + "\n" + mileages + "米", getResources().getDrawable(R.mipmap.star)));
+        PieDataSet dataSet = new PieDataSet(entries, "");
 
         dataSet.setDrawIcons(false);
 

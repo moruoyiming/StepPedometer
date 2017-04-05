@@ -33,6 +33,7 @@ import com.calypso.pedometer.R;
 import com.calypso.pedometer.greendao.DBHelper;
 import com.calypso.pedometer.greendao.entry.StepInfo;
 import com.calypso.pedometer.utils.DateUtil;
+import com.calypso.pedometer.utils.Timber;
 
 import java.util.Calendar;
 
@@ -58,6 +59,7 @@ public class StepService extends Service implements SensorEventListener {
     private static String CURRENTDATE = "";
     private boolean isNewDay = false;
     private long previousStep;
+    private long stepTotal;
     private TimeCount time;
 
     private static class MessengerHandler extends Handler {
@@ -85,6 +87,7 @@ public class StepService extends Service implements SensorEventListener {
     @Override
     public void onCreate() {
         super.onCreate();
+        Timber.tag("StepService");
         initBroadcastReceiver();
         new Thread(new Runnable() {
             @Override
@@ -113,7 +116,7 @@ public class StepService extends Service implements SensorEventListener {
         save();
         stopForeground(true);
         unregisterReceiver(mBatInfoReceiver);
-        Intent intent=new Intent(this,StepService.class);
+        Intent intent = new Intent(this, StepService.class);
         startService(intent);
         super.onDestroy();
         if (time != null) {
@@ -273,6 +276,8 @@ public class StepService extends Service implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
+        Timber.d("当前步数" + (long) event.values[0]);
+        stepTotal=(long)event.values[0];
         if (stepSensor == 0) {
             if (isNewDay) {
                 previousStep = (long) event.values[0];
@@ -299,10 +304,12 @@ public class StepService extends Service implements SensorEventListener {
             stepInfo.setCreteTime(DateUtil.getTodayTime(DateUtil.DATE_FULL_STR));
             stepInfo.setDate(CURRENTDATE);
             stepInfo.setStepCount(tempStep);
+            stepInfo.setStepTotal(stepTotal);
             stepInfo.setPreviousStepCount(previousStep);
             DBHelper.insertStepInfo(stepInfo);
         } else {
             stepInfo.setStepCount(tempStep);
+            stepInfo.setStepTotal(stepTotal);
             stepInfo.setPreviousStepCount(previousStep);
             DBHelper.updateStepInfo(stepInfo);
         }

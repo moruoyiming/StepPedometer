@@ -29,6 +29,7 @@ public class StepInfoDao extends AbstractDao<StepInfo, Long> {
         public final static Property Date = new Property(2, String.class, "date", false, "DATE");
         public final static Property CreteTime = new Property(3, String.class, "creteTime", false, "CRETETIME");
         public final static Property PreviousStepCount = new Property(4, long.class, "previousStepCount", false, "PREVIOUSSTEP");
+        public final static Property StepTotal = new Property(5, long.class, "stepTotal", false, "STEPTOTAL");
     }
 
 
@@ -48,7 +49,8 @@ public class StepInfoDao extends AbstractDao<StepInfo, Long> {
                 "\"STEPCOUNT\" INTEGER NOT NULL ," + // 1: stepCount
                 "\"DATE\" TEXT," + // 2: date
                 "\"CRETETIME\" TEXT," + // 3: creteTime
-                "\"PREVIOUSSTEP\" INTEGER NOT NULL );"); // 4: previousStepCount
+                "\"PREVIOUSSTEP\" INTEGER NOT NULL ," + // 4: previousStepCount
+                "\"STEPTOTAL\" INTEGER NOT NULL );"); // 5: stepTotal
         // Add Indexes
         db.execSQL("CREATE UNIQUE INDEX " + constraint + "IDX_STEP_INFO_DATE ON STEP_INFO" +
                 " (\"DATE\" ASC);");
@@ -80,6 +82,7 @@ public class StepInfoDao extends AbstractDao<StepInfo, Long> {
             stmt.bindString(4, creteTime);
         }
         stmt.bindLong(5, entity.getPreviousStepCount());
+        stmt.bindLong(6, entity.getStepTotal());
     }
 
     @Override
@@ -102,6 +105,7 @@ public class StepInfoDao extends AbstractDao<StepInfo, Long> {
             stmt.bindString(4, creteTime);
         }
         stmt.bindLong(5, entity.getPreviousStepCount());
+        stmt.bindLong(6, entity.getStepTotal());
     }
 
     @Override
@@ -116,7 +120,8 @@ public class StepInfoDao extends AbstractDao<StepInfo, Long> {
             cursor.getLong(offset + 1), // stepCount
             cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2), // date
             cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3), // creteTime
-            cursor.getLong(offset + 4) // previousStepCount
+            cursor.getLong(offset + 4), // previousStepCount
+            cursor.getLong(offset + 5) // stepTotal
         );
         return entity;
     }
@@ -128,6 +133,7 @@ public class StepInfoDao extends AbstractDao<StepInfo, Long> {
         entity.setDate(cursor.isNull(offset + 2) ? null : cursor.getString(offset + 2));
         entity.setCreteTime(cursor.isNull(offset + 3) ? null : cursor.getString(offset + 3));
         entity.setPreviousStepCount(cursor.getLong(offset + 4));
+        entity.setStepTotal(cursor.getLong(offset + 5));
      }
     
     @Override

@@ -32,14 +32,18 @@ public class StepInfo {
     @Property(nameInDb = "PREVIOUSSTEP")
     private long previousStepCount;
 
-    @Generated(hash = 1886611915)
+    @Property(nameInDb = "STEPTOTAL")
+    private long stepTotal;
+
+    @Generated(hash = 1717967210)
     public StepInfo(Long id, long stepCount, String date, String creteTime,
-                    long previousStepCount) {
+            long previousStepCount, long stepTotal) {
         this.id = id;
         this.stepCount = stepCount;
         this.date = date;
         this.creteTime = creteTime;
         this.previousStepCount = previousStepCount;
+        this.stepTotal = stepTotal;
     }
 
     @Generated(hash = 1153084582)
@@ -84,6 +88,14 @@ public class StepInfo {
 
     public void setPreviousStepCount(long previousStepCount) {
         this.previousStepCount = previousStepCount;
+    }
+
+    public long getStepTotal() {
+        return this.stepTotal;
+    }
+
+    public void setStepTotal(long stepTotal) {
+        this.stepTotal = stepTotal;
     }
 
 
