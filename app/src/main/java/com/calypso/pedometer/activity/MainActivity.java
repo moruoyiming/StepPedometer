@@ -21,7 +21,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
-import com.calypso.pedometer.StepModel;
+import com.calypso.pedometer.entry.StepModel;
 import com.calypso.pedometer.constant.Preferences;
 import com.calypso.pedometer.R;
 import com.calypso.pedometer.constant.Constant;
@@ -94,8 +94,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         bindService(intent, conn, BIND_AUTO_CREATE);
         initBarChart();
         initBarChatData();
-        initPieChart();
         setBarChartData();
+        initPieChart();
     }
 
     //以bind形式开启service，故有ServiceConnection接收回调

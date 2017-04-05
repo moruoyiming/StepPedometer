@@ -1,4 +1,4 @@
-package com.calypso.pedometer;
+package com.calypso.pedometer.entry;
 
 import android.graphics.drawable.Drawable;
 
