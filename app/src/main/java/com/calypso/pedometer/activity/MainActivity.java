@@ -23,22 +23,29 @@ import com.calypso.pedometer.greendao.entry.StepInfo;
 import com.calypso.pedometer.stepdetector.StepService;
 import com.calypso.pedometer.utils.ConversionUtil;
 import com.calypso.pedometer.utils.DateUtil;
+import com.calypso.pedometer.utils.StringAxisValueFormatter;
+import com.calypso.pedometer.utils.StringUtils;
 import com.calypso.pedometer.utils.Timber;
 import com.calypso.pedometer.view.MyYAxisValueFormatter;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.Description;
+import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IAxisValueFormatter;
+import com.github.mikephil.charting.formatter.IValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
+import com.github.mikephil.charting.utils.ViewPortHandler;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Timer;
 
 /**
  * Project：Pedometer
@@ -89,6 +96,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         lineChart = (LineChart) findViewById(R.id.ll_chart);
         Intent intent = new Intent(this, StepService.class);
         bindService(intent, conn, BIND_AUTO_CREATE);
+        xAxisValues = new ArrayList<>();
+        yAxisValues = new ArrayList<>();
         initBarChatData();
     }
 
@@ -100,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 long step = msg.getData().getLong("step");
                 String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
                 String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
-                textView.setText("今日步数：" + step + " 步" + "消耗卡路里：" + calorie + " 卡" + "大约行走: " + mileages + " 米");
+                textView.setText("今日步数:" + step + "步 \n" + "消耗卡路里:" + calorie + "卡\n" + "大约行走:" + mileages + "米");
                 delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
                 break;
             case Constant.REQUEST_SERVER:
@@ -116,70 +125,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         return false;
     }
 
-    private void initChart(final List<String> xList, final List<String> yList, List<Long> yData) {
-        Description description = new Description();
-        description.setText("");
-        lineChart.setDescription(description);
-        lineChart.setNoDataText("没有数据");
-        lineChart.setBackgroundColor(Color.WHITE);
-        lineChart.setDrawGridBackground(false);
-        lineChart.setTouchEnabled(false);
-        lineChart.getLegend().setEnabled(false);
-        lineChart.setExtraRightOffset(20f);
-        Typeface tf = Typeface.createFromAsset(getAssets(), "OpenSans-Regular.ttf");
-        XAxis xAxis = lineChart.getXAxis();
-        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setTypeface(tf);
-        xAxis.setTextSize(9f);
-        xAxis.setTextColor(Color.GRAY);
-        xAxis.setXOffset(10f);
-        xAxis.setDrawGridLines(false);
-        xAxis.setDrawAxisLine(true);
-        xAxis.setAxisMaximum(xList.size() - 1);
-        xAxis.setAxisMinimum(0);
-        xAxis.setLabelCount(xList.size(), true);//设置标尺的最大数量
-        xAxis.setValueFormatter(new IAxisValueFormatter() {
-            @Override
-            public String getFormattedValue(float value, AxisBase axis) {
-                String str = (String) xList.get((int) value);
-                return str.substring(5, str.length());
-            }
-        });
-
-        YAxis leftAxis = lineChart.getAxisLeft();
-        leftAxis.setTypeface(tf);
-        leftAxis.setTextColor(Color.GRAY);
-        leftAxis.enableGridDashedLine(10f, 10f, 0f); // 设置标尺线的格式
-        leftAxis.setAxisMaximum(yList.size() - 1);// 设置最大值
-        leftAxis.setAxisMinimum(0);// 设置最小值
-        leftAxis.setLabelCount(10, true);// 设置标尺的最大数量
-        leftAxis.setValueFormatter(new MyYAxisValueFormatter(yList));
-        leftAxis.setSpaceTop(5f);
-        leftAxis.setStartAtZero(true);
-        lineChart.getAxisRight().setEnabled(false);
-
-        setData(yData);
-    }
-
-    private void setData(List<Long> ydata) {
-        //Y轴数据集合
-        ArrayList<Entry> yVals = new ArrayList<>();
-        for (int i = 0; i < ydata.size(); i++) {
-            float val = ydata.get(i);
-            yVals.add(new Entry(i, val));
-        }
-        LineDataSet set1 = new LineDataSet(yVals, "DataSet 1");
-        set1.setAxisDependency(YAxis.AxisDependency.LEFT);
-        set1.setColor(Color.RED);
-        set1.setCircleColor(Color.RED);
-        set1.setLineWidth(1.5f);
-        set1.setCircleRadius(2f);
-        set1.setDrawHighlightIndicators(false);
-        set1.setValueTextColor(Color.RED);
-        set1.setDrawCircleHole(false);
-        LineData data = new LineData(set1);
-        lineChart.setData(data);
-    }
+    private List<String> xAxisValues;
+    private List<Float> yAxisValues;
 
     public void initBarChatData() {
         StepInfo stepInfo = DBHelper.getStepInfo(DateUtil.getTodayDate());
@@ -194,25 +141,169 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             steps = steps.subList(steps.size() - 7, steps.size());
         }
         countsize = steps.size() < 7 ? steps.size() : 7;
-        List<String> xList = new ArrayList<>();
-        List<String> yList = new ArrayList<>();
-        List<Long> mList = new ArrayList<>();
-        yList.add("0");
-        yList.add("2000");
-        yList.add("4000");
-        yList.add("6000");
-        yList.add("8000");
-        yList.add("10000");
-        yList.add("12000");
-        yList.add("14000");
-        yList.add("16000");
-        yList.add("18000");
-        for (int i = 0; i < countsize; i++) {
-            xList.add(steps.get(i).getDate());
-            mList.add(steps.get(i).getStepCount());
-            Timber.i("what" +steps.get(i).getStepCount());
+        if (countsize < 7) {
+            for (int i = 0; i < countsize; i++) {
+                xAxisValues.add(steps.get(i).getDate());
+                yAxisValues.add((float) steps.get(i).getStepCount()+4000);
+            }
+            for (int i = 1; i <=(7 - countsize); i++) {
+                xAxisValues.add(StringUtils.getPastDate(i));
+                yAxisValues.add(0f);
+            }
+            Collections.reverse(xAxisValues);
+            Collections.reverse(yAxisValues);
+        } else {
+            for (int i = 0; i < countsize; i++) {
+                xAxisValues.add(steps.get(i).getDate());
+                yAxisValues.add((float) steps.get(i).getStepCount());
+                Timber.i("what" + steps.get(i).getStepCount());
+            }
         }
-        initChart(xList, yList, mList);
+        setLineChart(lineChart, xAxisValues, yAxisValues, "一周运动情况", true);
     }
 
+    public static final int[] LINE_COLORS = {
+            Color.rgb(140, 210, 118), Color.rgb(159, 143, 186), Color.rgb(233, 197, 23)
+    };//绿色，紫色，黄色
+
+    public static final int[] LINE_FILL_COLORS = {
+            Color.rgb(222, 239, 228), Color.rgb(246, 234, 208), Color.rgb(235, 228, 248)
+    };
+
+    /**
+     * 单线单y轴图。
+     *
+     * @param lineChart
+     * @param xAxisValue
+     * @param yAxisValue
+     * @param title
+     * @param showSetValues 是否在折线上显示数据集的值。true为显示，此时y轴上的数值不可见，否则相反。
+     */
+    public static void setLineChart(LineChart lineChart, List<String> xAxisValue, List<Float> yAxisValue, String title, boolean showSetValues) {
+        List<List<Float>> entriesList = new ArrayList<>();
+        entriesList.add(yAxisValue);
+
+        List<String> titles = new ArrayList<>();
+        titles.add(title);
+
+        setLinesChart(lineChart, xAxisValue, entriesList, titles, showSetValues, null);
+    }
+
+    /**
+     * 绘制线图，默认最多绘制三种颜色。所有线均依赖左侧y轴显示。
+     *
+     * @param lineChart
+     * @param xAxisValue    x轴的轴
+     * @param yXAxisValues  y轴的值
+     * @param titles        每一个数据系列的标题
+     * @param showSetValues 是否在折线上显示数据集的值。true为显示，此时y轴上的数值不可见，否则相反。
+     * @param lineColors    线的颜色数组。为null时取默认颜色，此时最多绘制三种颜色。
+     */
+    public static void setLinesChart(LineChart lineChart, final List<String> xAxisValue, List<List<Float>> yXAxisValues, List<String> titles, boolean showSetValues, int[] lineColors) {
+        lineChart.getDescription().setEnabled(false);//设置描述
+        lineChart.setPinchZoom(false);//设置按比例放缩柱状图
+        lineChart.setDragEnabled(false);// 是否可以拖拽
+        lineChart.setScaleEnabled(false);// 是否可以缩放
+        XAxis xAxis = lineChart.getXAxis();
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setGranularity(1f);
+        xAxis.setDrawGridLines(false);
+        xAxis.setLabelCount(xAxisValue.size());
+        xAxis.setValueFormatter(new IAxisValueFormatter() {
+            @Override
+            public String getFormattedValue(float value, AxisBase axis) {
+                String str = xAxisValue.get((int) value);
+                return str.substring(5, str.length());
+            }
+        });
+        YAxis leftAxis = lineChart.getAxisLeft();
+        leftAxis.setPosition(YAxis.YAxisLabelPosition.OUTSIDE_CHART);
+        leftAxis.setDrawGridLines(true);
+        leftAxis.setGranularityEnabled(true);
+        leftAxis.setGranularity(0.1f);
+        leftAxis.setAxisMaximum(16000);
+        leftAxis.setLabelCount(xAxisValue.size());
+        leftAxis.setValueFormatter(new IAxisValueFormatter() {
+            @Override
+            public String getFormattedValue(float value, AxisBase axis) {
+                String str = xAxisValue.get((int) value);
+                return str.substring(5, str.length());
+            }
+        });
+        if (showSetValues) {
+            leftAxis.setDrawLabels(false);//折线上显示值，则不显示坐标轴上的值
+        }
+        lineChart.getAxisRight().setEnabled(false);
+        Legend legend = lineChart.getLegend();
+        legend.setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);
+        legend.setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
+        legend.setOrientation(Legend.LegendOrientation.HORIZONTAL);
+        legend.setDrawInside(false);
+        legend.setDirection(Legend.LegendDirection.LEFT_TO_RIGHT);
+        legend.setForm(Legend.LegendForm.LINE);
+        legend.setTextSize(12f);
+        setLinesChartData(lineChart, yXAxisValues, titles, showSetValues, lineColors);
+        lineChart.setExtraOffsets(10, 30, 20, 10);
+//        lineChart.animateX(1500);//数据显示动画，从左往右依次显示
+    }
+
+    private static void setLinesChartData(LineChart lineChart, List<List<Float>> yXAxisValues, List<String> titles, boolean showSetValues, int[] lineColors) {
+
+        List<List<Entry>> entriesList = new ArrayList<>();
+        for (int i = 0; i < yXAxisValues.size(); ++i) {
+            ArrayList<Entry> entries = new ArrayList<>();
+            for (int j = 0, n = yXAxisValues.get(i).size(); j < n; j++) {
+                entries.add(new Entry(j, yXAxisValues.get(i).get(j)));
+            }
+            entriesList.add(entries);
+        }
+
+        if (lineChart.getData() != null && lineChart.getData().getDataSetCount() > 0) {
+
+            for (int i = 0; i < lineChart.getData().getDataSetCount(); ++i) {
+                LineDataSet set = (LineDataSet) lineChart.getData().getDataSetByIndex(i);
+                set.setValues(entriesList.get(i));
+                set.setLabel(titles.get(i));
+            }
+
+            lineChart.getData().notifyDataChanged();
+            lineChart.notifyDataSetChanged();
+        } else {
+            ArrayList<ILineDataSet> dataSets = new ArrayList<>();
+
+            for (int i = 0; i < entriesList.size(); ++i) {
+                LineDataSet set = new LineDataSet(entriesList.get(i), titles.get(i));
+                if (lineColors != null) {
+                    set.setColor(lineColors[i % entriesList.size()]);
+                    set.setCircleColor(lineColors[i % entriesList.size()]);
+                    set.setCircleColorHole(Color.WHITE);
+                } else {
+                    set.setColor(LINE_COLORS[i % 3]);
+                    set.setCircleColor(LINE_COLORS[i % 3]);
+                    set.setCircleColorHole(Color.WHITE);
+                }
+
+                if (entriesList.size() == 1) {
+                    set.setDrawFilled(true);
+                    set.setFillColor(LINE_FILL_COLORS[i % 3]);
+                }
+                dataSets.add(set);
+            }
+
+            LineData data = new LineData(dataSets);
+            if (showSetValues) {
+                data.setValueTextSize(10f);
+                data.setValueFormatter(new IValueFormatter() {
+                    @Override
+                    public String getFormattedValue(float value, Entry entry, int i, ViewPortHandler viewPortHandler) {
+                        return StringUtils.double2String(value, 1);
+                    }
+                });
+            } else {
+                data.setDrawValues(false);
+            }
+
+            lineChart.setData(data);
+        }
+    }
 }
