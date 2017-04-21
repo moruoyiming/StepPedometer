@@ -4,7 +4,6 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
@@ -14,14 +13,8 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.SpannableString;
-import android.text.style.RelativeSizeSpan;
-import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.TextView;
 
-import com.calypso.pedometer.entry.StepModel;
 import com.calypso.pedometer.constant.Preferences;
 import com.calypso.pedometer.R;
 import com.calypso.pedometer.constant.Constant;
@@ -31,27 +24,17 @@ import com.calypso.pedometer.stepdetector.StepService;
 import com.calypso.pedometer.utils.ConversionUtil;
 import com.calypso.pedometer.utils.DateUtil;
 import com.calypso.pedometer.utils.Timber;
-import com.github.mikephil.charting.animation.Easing;
-import com.github.mikephil.charting.charts.BarChart;
-import com.github.mikephil.charting.charts.PieChart;
+import com.calypso.pedometer.view.MyYAxisValueFormatter;
+import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.Description;
-import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.PieData;
-import com.github.mikephil.charting.data.PieDataSet;
-import com.github.mikephil.charting.data.PieEntry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IAxisValueFormatter;
-import com.github.mikephil.charting.formatter.PercentFormatter;
-import com.github.mikephil.charting.highlight.Highlight;
-import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
-import com.github.mikephil.charting.utils.ColorTemplate;
-import com.github.mikephil.charting.utils.MPPointF;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -63,7 +46,7 @@ import java.util.List;
  * Date：2017/3/27 14:47
  * Summry：
  */
-public class MainActivity extends AppCompatActivity implements Handler.Callback, OnChartValueSelectedListener {
+public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
     private TextView textView;
     private Messenger messenger;
@@ -71,35 +54,11 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
     private Handler delayHandler;
     private DecimalFormat df1 = new DecimalFormat("0.00");
     private int stepBenchmark = 0;
-    private BarChart mChart;
-    private PieChart mPieChart;
     protected Typeface mTfLight;
-    private List<StepModel> mSinusData;
     private int countsize = 0;
-    protected String[] mParties = new String[]{"步数", "热量", "米数"};
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        Timber.tag("MainActivity");
-        setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        stepBenchmark = Preferences.getStepBenchmark(MainActivity.this);
-        delayHandler = new Handler(this);
-        textView = (TextView) findViewById(R.id.step);
-        mChart = (BarChart) findViewById(R.id.chart1);
-        mPieChart = (PieChart) findViewById(R.id.chart);
-        Intent intent = new Intent(this, StepService.class);
-        bindService(intent, conn, BIND_AUTO_CREATE);
-        initBarChart();
-        initBarChatData();
-        setBarChartData();
-        initPieChart();
-    }
-
+    private LineChart lineChart;
     //以bind形式开启service，故有ServiceConnection接收回调
-    ServiceConnection conn = new ServiceConnection() {
+    private ServiceConnection conn = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             try {
@@ -118,6 +77,23 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
     };
 
     @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Timber.tag("MainActivity");
+        setContentView(R.layout.activity_main);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        stepBenchmark = Preferences.getStepBenchmark(MainActivity.this);
+        delayHandler = new Handler(this);
+        textView = (TextView) findViewById(R.id.step);
+        lineChart = (LineChart) findViewById(R.id.ll_chart);
+        Intent intent = new Intent(this, StepService.class);
+        bindService(intent, conn, BIND_AUTO_CREATE);
+        initBarChatData();
+    }
+
+
+    @Override
     public boolean handleMessage(Message msg) {
         switch (msg.what) {
             case Constant.MSG_FROM_SERVER:
@@ -125,18 +101,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
                 String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
                 String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
                 textView.setText("今日步数：" + step + " 步" + "消耗卡路里：" + calorie + " 卡" + "大约行走: " + mileages + " 米");
-//                mPieChart.setCenterText(generateCenterSpannableText(step));
-//                mPieChart.notifyDataSetChanged();
-//                mPieChart.invalidate();
-//                ArrayList<BarEntry> entries = new ArrayList<BarEntry>();
-//                mSinusData.get(countsize - 1).setStepCount(step);
-//                entries.add(mSinusData.get(i));
-//                BarDataSet set = (BarDataSet) mChart.getData().getDataSetByIndex(0);
-//                set.setValues(entries);
-//                Timber.d("what " + (countsize - 1) + " " + mSinusData.get(countsize - 1).getStepCount());
-//                mChart.getData().notifyDataChanged();
-//                mChart.notifyDataSetChanged();
-//                mChart.invalidate();
                 delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
                 break;
             case Constant.REQUEST_SERVER:
@@ -152,105 +116,69 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
         return false;
     }
 
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    private SpannableString generateCenterSpannableText(long step) {
-
-        SpannableString s = new SpannableString("今日步数\n" + step);
-        s.setSpan(new RelativeSizeSpan(1.4f), 0, 4, 0);
-//        s.setSpan(new StyleSpan(Typeface.NORMAL), 14, s.length() - 15, 0);
-//        s.setSpan(new ForegroundColorSpan(Color.GRAY), 14, s.length() - 15, 0);
-//        s.setSpan(new RelativeSizeSpan(.8f), 14, s.length() - 15, 0);
-//        s.setSpan(new StyleSpan(Typeface.ITALIC), s.length() - 14, s.length(), 0);
-//        s.setSpan(new ForegroundColorSpan(ColorTemplate.getHoloBlue()), s.length() - 14, s.length(), 0);
-        return s;
-    }
-
-    @Override
-    public void onValueSelected(Entry e, Highlight h) {
-        if (e == null)
-            return;
-        Log.i("VAL SELECTED",
-                "Value: " + e.getY() + ", index: " + h.getX()
-                        + ", DataSet index: " + h.getDataSetIndex());
-    }
-
-    @Override
-    public void onNothingSelected() {
-        Log.i("PieChart", "nothing selected");
-    }
-
-    public void initBarChart() {
-        mSinusData = new ArrayList<>();
-        mChart.setPinchZoom(false);
-        mChart.setDragEnabled(false);// 是否可以拖拽
-        mChart.setScaleEnabled(false);// 是否可以缩放
-        mChart.setDrawBarShadow(false);//是否显示上层bar
-        mChart.setDrawValueAboveBar(true);//设置内容到above
-        mChart.setMaxVisibleValueCount(10);
-        mChart.setDrawGridBackground(false);
-        mChart.getDescription().setEnabled(false);//是否显示右下角description
-        mTfLight = Typeface.createFromAsset(getAssets(), "OpenSans-Light.ttf");
-        XAxis xAxis = mChart.getXAxis();
+    private void initChart(final List<String> xList, final List<String> yList, List<Long> yData) {
+        Description description = new Description();
+        description.setText("");
+        lineChart.setDescription(description);
+        lineChart.setNoDataText("没有数据");
+        lineChart.setBackgroundColor(Color.WHITE);
+        lineChart.setDrawGridBackground(false);
+        lineChart.setTouchEnabled(false);
+        lineChart.getLegend().setEnabled(false);
+        lineChart.setExtraRightOffset(20f);
+        Typeface tf = Typeface.createFromAsset(getAssets(), "OpenSans-Regular.ttf");
+        XAxis xAxis = lineChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-//        xAxis.setTextColor(R.color.colorAccent);//设置轴标签文本颜色。
-//        xAxis.setTextSize(20);//设置轴标签的字体大小。
-//        xAxis.setTypeface(mTfLight);
+        xAxis.setTypeface(tf);
+        xAxis.setTextSize(9f);
+        xAxis.setTextColor(Color.GRAY);
+        xAxis.setXOffset(10f);
         xAxis.setDrawGridLines(false);
-        xAxis.setLabelCount(countsize);
         xAxis.setDrawAxisLine(true);
-        xAxis.setAvoidFirstLastClipping(true);
+        xAxis.setAxisMaximum(xList.size() - 1);
+        xAxis.setAxisMinimum(0);
+        xAxis.setLabelCount(xList.size(), true);//设置标尺的最大数量
         xAxis.setValueFormatter(new IAxisValueFormatter() {
             @Override
             public String getFormattedValue(float value, AxisBase axis) {
-                String str = (String) mSinusData.get(Math.min(Math.max((int) value, 0), mSinusData.size() - 1)).getData();
+                String str = (String) xList.get((int) value);
                 return str.substring(5, str.length());
             }
         });
-        YAxis leftAxis = mChart.getAxisLeft();
-        leftAxis.setLabelCount(7, false);
-        leftAxis.setAxisMaximum(20000);
-        leftAxis.setGranularityEnabled(true);
-        leftAxis.setGranularity(0.1f);
 
-        YAxis rightAxis = mChart.getAxisRight();
-        rightAxis.setDrawGridLines(false);
-        rightAxis.setLabelCount(7, false);
-        rightAxis.setAxisMaximum(20000);
-        rightAxis.setGranularity(0.1f);
+        YAxis leftAxis = lineChart.getAxisLeft();
+        leftAxis.setTypeface(tf);
+        leftAxis.setTextColor(Color.GRAY);
+        leftAxis.enableGridDashedLine(10f, 10f, 0f); // 设置标尺线的格式
+        leftAxis.setAxisMaximum(yList.size() - 1);// 设置最大值
+        leftAxis.setAxisMinimum(0);// 设置最小值
+        leftAxis.setLabelCount(10, true);// 设置标尺的最大数量
+        leftAxis.setValueFormatter(new MyYAxisValueFormatter(yList));
+        leftAxis.setSpaceTop(5f);
+        leftAxis.setStartAtZero(true);
+        lineChart.getAxisRight().setEnabled(false);
 
-        Legend l = mChart.getLegend();
-        l.setVerticalAlignment(Legend.LegendVerticalAlignment.BOTTOM);
-        l.setHorizontalAlignment(Legend.LegendHorizontalAlignment.LEFT);
-        l.setOrientation(Legend.LegendOrientation.HORIZONTAL);
-        l.setDrawInside(false);
-        l.setForm(Legend.LegendForm.SQUARE);
-        l.setFormSize(7f);
-        l.setTextSize(11f);
-        l.setXEntrySpace(4f);
-        mChart.animateXY(2000, 2000);
+        setData(yData);
+    }
 
+    private void setData(List<Long> ydata) {
+        //Y轴数据集合
+        ArrayList<Entry> yVals = new ArrayList<>();
+        for (int i = 0; i < ydata.size(); i++) {
+            float val = ydata.get(i);
+            yVals.add(new Entry(i, val));
+        }
+        LineDataSet set1 = new LineDataSet(yVals, "DataSet 1");
+        set1.setAxisDependency(YAxis.AxisDependency.LEFT);
+        set1.setColor(Color.RED);
+        set1.setCircleColor(Color.RED);
+        set1.setLineWidth(1.5f);
+        set1.setCircleRadius(2f);
+        set1.setDrawHighlightIndicators(false);
+        set1.setValueTextColor(Color.RED);
+        set1.setDrawCircleHole(false);
+        LineData data = new LineData(set1);
+        lineChart.setData(data);
     }
 
     public void initBarChatData() {
@@ -266,144 +194,25 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback,
             steps = steps.subList(steps.size() - 7, steps.size());
         }
         countsize = steps.size() < 7 ? steps.size() : 7;
+        List<String> xList = new ArrayList<>();
+        List<String> yList = new ArrayList<>();
+        List<Long> mList = new ArrayList<>();
+        yList.add("0");
+        yList.add("2000");
+        yList.add("4000");
+        yList.add("6000");
+        yList.add("8000");
+        yList.add("10000");
+        yList.add("12000");
+        yList.add("14000");
+        yList.add("16000");
+        yList.add("18000");
         for (int i = 0; i < countsize; i++) {
-            StepModel barEntry = new StepModel(i, steps.get(i).getStepCount(), steps.get(i).getDate());
-            mSinusData.add(barEntry);
+            xList.add(steps.get(i).getDate());
+            mList.add(steps.get(i).getStepCount());
+            Timber.i("what" +steps.get(i).getStepCount());
         }
+        initChart(xList, yList, mList);
     }
 
-    public void initPieChart() {
-        mPieChart.setUsePercentValues(false);
-        mPieChart.getDescription().setEnabled(true);
-        Description description = new Description();
-        description.setText("运动数据");
-        description.setTextColor(Color.RED);
-        description.setTextAlign(Paint.Align.RIGHT);
-        description.setTextSize(16);
-        mPieChart.setDescription(description);
-        mPieChart.setExtraOffsets(5, 10, 5, 5);
-
-        mPieChart.setDragDecelerationFrictionCoef(0.95f);
-
-//        mPieChart.setCenterTextTypeface(mTfLight);
-
-
-        mPieChart.setDrawHoleEnabled(true);
-        mPieChart.setHoleColor(Color.WHITE);
-
-        mPieChart.setTransparentCircleColor(Color.WHITE);
-        mPieChart.setTransparentCircleAlpha(110);
-
-        mPieChart.setHoleRadius(58f);
-        mPieChart.setTransparentCircleRadius(61f);
-
-        mPieChart.setDrawCenterText(true);
-        mPieChart.setCenterTextColor(Color.RED);
-        mPieChart.setCenterTextSize(20);
-        mPieChart.setRotationAngle(0);
-        // mPieChartble rotation of the chart by touch
-        mPieChart.setRotationEnabled(false);
-        mPieChart.setHighlightPerTapEnabled(true);
-        mPieChart.setOnChartValueSelectedListener(this);
-
-        setPieChartData(3, 100);
-
-        mPieChart.animateY(1400, Easing.EasingOption.EaseInOutQuad);
-
-        Legend l1 = mPieChart.getLegend();
-        l1.setVerticalAlignment(Legend.LegendVerticalAlignment.TOP);
-        l1.setHorizontalAlignment(Legend.LegendHorizontalAlignment.RIGHT);
-        l1.setOrientation(Legend.LegendOrientation.VERTICAL);
-        l1.setDrawInside(false);
-        l1.setXEntrySpace(7f);
-        l1.setYEntrySpace(0f);
-        l1.setYOffset(0f);
-
-        // entry label styling
-        mPieChart.setEntryLabelColor(Color.WHITE);
-        mPieChart.setEntryLabelTextSize(12f);
-    }
-
-    private void setBarChartData() {
-        ArrayList<BarEntry> entries = new ArrayList<BarEntry>();
-        for (int i = 0; i < countsize; i++) {
-            entries.add(mSinusData.get(i));
-        }
-        BarDataSet set;
-        if (mChart.getData() != null && mChart.getData().getDataSetCount() > 0) {
-            set = (BarDataSet) mChart.getData().getDataSetByIndex(0);
-            set.setValues(entries);
-            mChart.getData().notifyDataChanged();
-            mChart.notifyDataSetChanged();
-        } else {
-            set = new BarDataSet(entries, "最近一周运动情况");
-            set.setColor(Color.rgb(240, 120, 124));
-        }
-
-        set.setDrawValues(true);
-        BarData data = new BarData(set);
-        data.setValueTextSize(10f);
-        data.setValueTypeface(mTfLight);
-        data.setDrawValues(true);
-        data.setBarWidth(0.8f);
-        mChart.setData(data);
-    }
-
-
-    private void setPieChartData(int count, long step) {
-
-        String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
-        String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
-        ArrayList<PieEntry> entries = new ArrayList<PieEntry>();
-
-        // NOTE: The order of the entries when being added to the entries array determines their position around the center of
-        // the chart.
-        entries.add(new PieEntry(100 / 3, mParties[0] + "\n" + step + "步", getResources().getDrawable(R.mipmap.star)));
-        entries.add(new PieEntry(100 / 3, mParties[1] + "\n" + calorie + "卡", getResources().getDrawable(R.mipmap.star)));
-        entries.add(new PieEntry(100 / 3, mParties[2] + "\n" + mileages + "米", getResources().getDrawable(R.mipmap.star)));
-        PieDataSet dataSet = new PieDataSet(entries, "");
-
-        dataSet.setDrawIcons(false);
-
-        dataSet.setSliceSpace(3f);
-        dataSet.setIconsOffset(new MPPointF(0, 40));
-        dataSet.setSelectionShift(5f);
-
-        // add a lot of colors
-
-        ArrayList<Integer> colors = new ArrayList<Integer>();
-
-
-        for (int c : ColorTemplate.COLORFUL_COLORS)
-            colors.add(c);
-
-        for (int c : ColorTemplate.LIBERTY_COLORS)
-            colors.add(c);
-
-        for (int c : ColorTemplate.PASTEL_COLORS)
-            colors.add(c);
-
-        for (int c : ColorTemplate.VORDIPLOM_COLORS)
-            colors.add(c);
-
-        for (int c : ColorTemplate.JOYFUL_COLORS)
-            colors.add(c);
-
-        colors.add(ColorTemplate.getHoloBlue());
-
-        dataSet.setColors(colors);
-        //dataSet.setSelectionShift(0f);
-
-        PieData data = new PieData(dataSet);
-        data.setValueFormatter(new PercentFormatter());
-        data.setValueTextSize(11f);
-        data.setValueTextColor(Color.WHITE);
-        data.setValueTypeface(mTfLight);
-        mPieChart.setData(data);
-
-        // undo all highlights
-        mPieChart.highlightValues(null);
-
-        mPieChart.invalidate();
-    }
 }

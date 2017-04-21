@@ -8,23 +8,18 @@
     tools:context="com.calypso.pedometer.activity.MainActivity"
     tools:showIn="@layout/activity_main">
 
+
     <TextView
         android:id="@+id/step"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!" />
-
-    <com.github.mikephil.charting.charts.PieChart
-        android:id="@+id/chart"
+        android:text="Hello World!"
+        android:textSize="20sp" />
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/ll_chart"
         android:layout_width="match_parent"
         android:layout_height="300dp"
-        android:visibility="gone"
-        android:layout_below="@+id/step" />
-
-    <com.github.mikephil.charting.charts.BarChart
-        android:id="@+id/chart1"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:layout_alignParentBottom="true" />
-
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:padding="5dp" />
 </RelativeLayout>
