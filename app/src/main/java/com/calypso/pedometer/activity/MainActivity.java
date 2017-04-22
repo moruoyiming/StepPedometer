@@ -113,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 long step = msg.getData().getLong("step");
                 String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
                 String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
-                textView.setText(" 消耗卡路里:" + calorie + "卡\n" + "大约行走:" + mileages + "米");
+                textView.setText("消耗卡路里:" + calorie + "卡\n" + "大约行走:" + mileages + "米");
                 delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
                 colorArcProgressBar.setCurrentValues((int)step);
                 break;

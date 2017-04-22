@@ -35,7 +35,7 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:text="Hello World!"
-        android:textColor="@color/colorAccent"
+        android:textColor="@color/green06"
         android:textSize="24sp" />
 
     <com.github.mikephil.charting.charts.LineChart
