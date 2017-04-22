@@ -9,16 +9,34 @@
     tools:showIn="@layout/activity_main">
 
 
+
+    <com.calypso.pedometer.view.ColorArcProgressBar
+        android:id="@+id/colorarc"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_centerHorizontal="true"
+        android:layout_gravity="center_horizontal"
+        app:back_color="@android:color/darker_gray"
+        app:back_width="10dp"
+        app:front_color1="@color/green06"
+        app:front_width="10dp"
+        app:is_need_content="true"
+        app:is_need_title="true"
+        app:max_value="20000"
+        app:is_need_unit="true"
+        app:string_title="截止当前已走"
+        app:string_unit="步"
+        app:total_engle="270" />
+
     <TextView
         android:id="@+id/step"
+        android:layout_below="@id/colorarc"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="30dp"
         android:text="Hello World!"
         android:textColor="@color/colorAccent"
-        android:textSize="30sp" />
-
+        android:textSize="24sp" />
 
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/ll_chart"

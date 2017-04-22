@@ -26,6 +26,7 @@ import com.calypso.pedometer.utils.DateUtil;
 import com.calypso.pedometer.utils.StringAxisValueFormatter;
 import com.calypso.pedometer.utils.StringUtils;
 import com.calypso.pedometer.utils.Timber;
+import com.calypso.pedometer.view.ColorArcProgressBar;
 import com.calypso.pedometer.view.MultiScrollNumber;
 import com.calypso.pedometer.view.MyYAxisValueFormatter;
 import com.github.mikephil.charting.charts.LineChart;
@@ -65,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     protected Typeface mTfLight;
     private int countsize = 0;
     private LineChart lineChart;
+    private ColorArcProgressBar colorArcProgressBar;
     //以bind形式开启service，故有ServiceConnection接收回调
     private ServiceConnection conn = new ServiceConnection() {
         @Override
@@ -95,6 +97,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         delayHandler = new Handler(this);
         textView = (TextView) findViewById(R.id.step);
         lineChart = (LineChart) findViewById(R.id.ll_chart);
+        colorArcProgressBar = (ColorArcProgressBar) findViewById(R.id.colorarc);
         Intent intent = new Intent(this, StepService.class);
         bindService(intent, conn, BIND_AUTO_CREATE);
         xAxisValues = new ArrayList<>();
@@ -110,8 +113,9 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 long step = msg.getData().getLong("step");
                 String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
                 String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
-                textView.setText("今日步数:" + step + "步 \n" + "消耗卡路里:" + calorie + "卡\n" + "大约行走:" + mileages + "米");
+                textView.setText(" 消耗卡路里:" + calorie + "卡\n" + "大约行走:" + mileages + "米");
                 delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
+                colorArcProgressBar.setCurrentValues((int)step);
                 break;
             case Constant.REQUEST_SERVER:
                 try {
