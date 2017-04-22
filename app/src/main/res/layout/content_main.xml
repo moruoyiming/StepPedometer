@@ -15,9 +15,10 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="30dp"
-        android:textColor="@color/colorAccent"
         android:text="Hello World!"
+        android:textColor="@color/colorAccent"
         android:textSize="30sp" />
+
 
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/ll_chart"

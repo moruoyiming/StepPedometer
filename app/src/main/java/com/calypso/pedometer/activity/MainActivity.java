@@ -26,6 +26,7 @@ import com.calypso.pedometer.utils.DateUtil;
 import com.calypso.pedometer.utils.StringAxisValueFormatter;
 import com.calypso.pedometer.utils.StringUtils;
 import com.calypso.pedometer.utils.Timber;
+import com.calypso.pedometer.view.MultiScrollNumber;
 import com.calypso.pedometer.view.MyYAxisValueFormatter;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.AxisBase;
@@ -144,9 +145,11 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         if (countsize < 7) {
             for (int i = 0; i < countsize; i++) {
                 xAxisValues.add(steps.get(i).getDate());
-                yAxisValues.add((float) steps.get(i).getStepCount()+4000);
+                yAxisValues.add((float) steps.get(i).getStepCount());
+                Collections.reverse(xAxisValues);
+                Collections.reverse(yAxisValues);
             }
-            for (int i = 1; i <=(7 - countsize); i++) {
+            for (int i = countsize; i <= (7 - countsize); i++) {
                 xAxisValues.add(StringUtils.getPastDate(i));
                 yAxisValues.add(0f);
             }
