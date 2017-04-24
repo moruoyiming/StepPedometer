@@ -23,15 +23,11 @@ import com.calypso.pedometer.greendao.entry.StepInfo;
 import com.calypso.pedometer.stepdetector.StepService;
 import com.calypso.pedometer.utils.ConversionUtil;
 import com.calypso.pedometer.utils.DateUtil;
-import com.calypso.pedometer.utils.StringAxisValueFormatter;
 import com.calypso.pedometer.utils.StringUtils;
 import com.calypso.pedometer.utils.Timber;
 import com.calypso.pedometer.view.ColorArcProgressBar;
-import com.calypso.pedometer.view.MultiScrollNumber;
-import com.calypso.pedometer.view.MyYAxisValueFormatter;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.AxisBase;
-import com.github.mikephil.charting.components.Description;
 import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
@@ -47,7 +43,6 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Timer;
 
 /**
  * Project：Pedometer
@@ -57,7 +52,7 @@ import java.util.Timer;
  */
 public class MainActivity extends AppCompatActivity implements Handler.Callback {
 
-    private TextView textView;
+    private TextView textView, textView2;
     private Messenger messenger;
     private Messenger mGetReplyMessenger = new Messenger(new Handler(this));
     private Handler delayHandler;
@@ -67,6 +62,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
     private int countsize = 0;
     private LineChart lineChart;
     private ColorArcProgressBar colorArcProgressBar;
+    private List<String> xAxisValues = new ArrayList<>();
+    private List<Float> yAxisValues = new ArrayList<>();
+    public static final int[] LINE_COLORS = {Color.rgb(140, 210, 118), Color.rgb(159, 143, 186), Color.rgb(233, 197, 23)};
+    public static final int[] LINE_FILL_COLORS = {Color.rgb(222, 239, 228), Color.rgb(246, 234, 208), Color.rgb(235, 228, 248)};
     //以bind形式开启service，故有ServiceConnection接收回调
     private ServiceConnection conn = new ServiceConnection() {
         @Override
@@ -86,22 +85,14 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         }
     };
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Timber.tag("MainActivity");
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        stepBenchmark = Preferences.getStepBenchmark(MainActivity.this);
-        delayHandler = new Handler(this);
-        textView = (TextView) findViewById(R.id.step);
-        lineChart = (LineChart) findViewById(R.id.ll_chart);
-        colorArcProgressBar = (ColorArcProgressBar) findViewById(R.id.colorarc);
-        Intent intent = new Intent(this, StepService.class);
-        bindService(intent, conn, BIND_AUTO_CREATE);
-        xAxisValues = new ArrayList<>();
-        yAxisValues = new ArrayList<>();
+        initView();
+        initData();
         initBarChatData();
     }
 
@@ -113,9 +104,10 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
                 long step = msg.getData().getLong("step");
                 String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
                 String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
-                textView.setText("消耗卡路里:" + calorie + "卡\n" + "大约行走:" + mileages + "米");
+                textView.setText("卡路里:" + calorie + "卡");
+                textView2.setText("  行走:" + mileages + "米");
                 delayHandler.sendEmptyMessageDelayed(Constant.REQUEST_SERVER, Constant.TIME_INTERVAL);
-                colorArcProgressBar.setCurrentValues((int)step);
+                colorArcProgressBar.setCurrentValues((int) step);
                 break;
             case Constant.REQUEST_SERVER:
                 try {
@@ -130,8 +122,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         return false;
     }
 
-    private List<String> xAxisValues;
-    private List<Float> yAxisValues;
 
     public void initBarChatData() {
         StepInfo stepInfo = DBHelper.getStepInfo(DateUtil.getTodayDate());
@@ -139,7 +129,8 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             long step = stepInfo.getStepCount();
             String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
             String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
-            textView.setText("今日步数：" + step + " 步" + "消耗卡路里：" + calorie + " 卡" + "大约行走: " + mileages + " 米");
+            textView.setText("卡路里:" + calorie + "卡");
+            textView2.setText("  行走:" + mileages + "米");
         }
         List<StepInfo> steps = DBHelper.getAllStepInfo();
         if (steps.size() > 7) {
@@ -147,18 +138,27 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         }
         countsize = steps.size() < 7 ? steps.size() : 7;
         if (countsize < 7) {
-            for (int i = 0; i < countsize; i++) {
-                xAxisValues.add(steps.get(i).getDate());
-                yAxisValues.add((float) steps.get(i).getStepCount());
+            if (countsize >= 2) {
+                for (int i = 0; i < countsize; i++) {
+                    xAxisValues.add(steps.get(i).getDate());
+                    yAxisValues.add((float) steps.get(i).getStepCount());
+                    Timber.i("what" + steps.get(i).getStepCount());
+                }
+                Collections.reverse(xAxisValues);
+                Collections.reverse(yAxisValues);
+            } else {
+                for (int i = 0; i < countsize; i++) {
+                    xAxisValues.add(steps.get(i).getDate());
+                    yAxisValues.add((float) steps.get(i).getStepCount());
+                    Timber.i("what" + steps.get(i).getStepCount());
+                }
+                for (int i = 0; i < (2 - countsize); i++) {
+                    xAxisValues.add(StringUtils.getPastDate(i));
+                    yAxisValues.add(0f);
+                }
                 Collections.reverse(xAxisValues);
                 Collections.reverse(yAxisValues);
             }
-            for (int i = countsize; i <= (7 - countsize); i++) {
-                xAxisValues.add(StringUtils.getPastDate(i));
-                yAxisValues.add(0f);
-            }
-            Collections.reverse(xAxisValues);
-            Collections.reverse(yAxisValues);
         } else {
             for (int i = 0; i < countsize; i++) {
                 xAxisValues.add(steps.get(i).getDate());
@@ -169,13 +169,6 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
         setLineChart(lineChart, xAxisValues, yAxisValues, "一周运动情况", true);
     }
 
-    public static final int[] LINE_COLORS = {
-            Color.rgb(140, 210, 118), Color.rgb(159, 143, 186), Color.rgb(233, 197, 23)
-    };//绿色，紫色，黄色
-
-    public static final int[] LINE_FILL_COLORS = {
-            Color.rgb(222, 239, 228), Color.rgb(246, 234, 208), Color.rgb(235, 228, 248)
-    };
 
     /**
      * 单线单y轴图。
@@ -312,5 +305,21 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
 
             lineChart.setData(data);
         }
+    }
+
+    public void initData() {
+        stepBenchmark = Preferences.getStepBenchmark(MainActivity.this);
+        delayHandler = new Handler(this);
+        Intent intent = new Intent(this, StepService.class);
+        bindService(intent, conn, BIND_AUTO_CREATE);
+    }
+
+    public void initView() {
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        textView = (TextView) findViewById(R.id.step);
+        textView2 = (TextView) findViewById(R.id.step2);
+        lineChart = (LineChart) findViewById(R.id.ll_chart);
+        colorArcProgressBar = (ColorArcProgressBar) findViewById(R.id.colorarc);
     }
 }
