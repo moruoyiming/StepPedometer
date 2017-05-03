@@ -8,7 +8,7 @@ Android 记步应用软件
 
 #Example
 
-[app-debug.apk](https://github.com/moruoyiming/RosyProgress/raw/master/app-debug.apk)
+[app-debug.apk](https://github.com/moruoyiming/StepPedometer/blob/master/apks/app-debug.apk)
 
 #How to Use
 
