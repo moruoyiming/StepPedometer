@@ -11,14 +11,34 @@ Android 记步应用软件
 
 [app-debug.apk](https://github.com/moruoyiming/StepPedometer/blob/master/apks/app-debug.apk)
 
-##
- * 基于 MVP + RxJava + Retrofit
- * RecyclerView 加载复杂布局
- * 实现下拉上推功能
- * 视频播放功能
- * 更换皮肤功能
+##技术
+ * 运用GreenDao数据库实现数据存储
+ * 记步功能调用自带的计步传感器,步行检测传感器,加速传感器 三种检测方式
+ * 运用MPAndroidChart展现数据
+ * 自定义圆形ProgressBar实现渐变色
+ * 自定义View实现数据滚动
 
+##部分代码
+```   private void addCountStepListener() {
+        Sensor detectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+        Sensor countSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        if (countSensor != null) {
+            stepSensor = 0;
+            Log.v(TAG, "countSensor 计步传感器");
+            sensorManager.registerListener(this, countSensor, SensorManager.SENSOR_DELAY_UI);
+        } else if (detectorSensor != null) {
+            stepSensor = 1;
+            Log.v(TAG, "detector 步行检测传感器");
+            sensorManager.registerListener(StepService.this, detectorSensor, SensorManager.SENSOR_DELAY_UI);
+        } else {
+            stepSensor = 2;
+            Log.v(TAG, "Count sensor not available! 没有可用的传感器，只能用加速传感器了");
+            addBasePedoListener();
+        }
+    }
+```
 
+##部分功能并不完善,还在优化当中.欢迎大家Star 及 Mark 也可以分享给小伙伴哦;
 
 #License
 
