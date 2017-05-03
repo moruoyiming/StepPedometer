@@ -129,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements Handler.Callback 
             long step = stepInfo.getStepCount();
             String mileages = String.valueOf(ConversionUtil.step2Mileage(step, stepBenchmark));
             String calorie = df1.format(ConversionUtil.step2Calories(step, stepBenchmark));
-            textView.setText("卡路里:" + calorie + "卡");
+            textView.setText("   卡路里:" + calorie + "卡");
             textView2.setText("  行走:" + mileages + "米");
         }
         List<StepInfo> steps = DBHelper.getAllStepInfo();
