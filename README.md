@@ -4,7 +4,7 @@ Android 记步应用软件
 
 #Preview
 
-![image](https://github.com/moruoyiming/RosyProgress/blob/master/pics/device-2017-04-20-134955.gif?raw=true)
+![image](https://github.com/moruoyiming/StepPedometer/blob/master/pics/Screenshot_2017-05-03-15-34-47-980_com.calypso.pe.png)
 
 #Example
 
